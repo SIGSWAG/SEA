@@ -1,0 +1,155 @@
+- Question 2-2:
+	- section .text :
+		- début : 00008000 <_start>
+		- fin : 000091a4
+	- section .bss :
+		- début : 000091a8
+		- fin : 000091b8
+	- début fonctions kmain.c :
+		- 000090c4 <dummy>:
+		- 000090cc <div>:
+		- 00009128 <compute_volume>:
+		- 00009178 <kmain>:
+		
+- Question 2-3:
+R0, R1, R2, R3 sont les registres utilisés par la fonction div. (SP et PC aussi)
+Utilisation du registre R3 pour la variable result
+
+- Question 2-4:
+La pile croît dans le sens décroissant
+Plus petite adresse atteinte par SP : 0x95d4 (dans la fonction div)
+SP pointe sur la dernière case pleine
+
+- Question 2-5:
+0x9610 => 0x0
+0x960c => 0x0
+0x9608 => 0x8098	=> 32920
+0x9604 => 0x0
+0x9600 => 0x5
+0x95fc => 0x0
+0x95f8 => 0x9198	=> 37272
+0x95f4 => 0x0
+0x95f0 => 0x7d		=> 125
+0x95ec => 0x0
+0x95e8 => 0x5
+0x95e4 => 0x0
+0x95e0 => 0x20b		=> 523
+0x95dc => 0xcb		=> 203
+0x95d8 => 0x2b55c	=> 177500
+0x95d4 => 0x153		=> 339
+
+Question 2-6:
+L'instruction bl (branch and link) met à jour implicitement le LR (Link Register)
+
+Question 2-7:
+Le programme ne retourne pas correctement de dummy(), car l'instruction b (branch) n'a pas sauvegardé l'adresse de retour dans le LR, qui est utilisée à la fin de dummy pour retourner à l'appelant.
+
+Question 2-8:
+Code ASM en C :
+- la ligne qui permet de mettre dans le registre R2 le contenu de la variable radius :
+	__asm("mov r2, %0" : : "r"(radius));
+- la ligne qui permet de mettre dans la variable radius le contenu du registre R3.
+	__asm("mov %0, r3" : "=r"(radius));
+
+Question 2-9:
+00009128 <compute_volume>: (naked on)
+    9128:	e1a03000 	mov	r3, r0
+    912c:	e0020393 	mul	r2, r3, r3
+    9130:	e0040293 	mul	r4, r3, r2
+    9134:	e59f3014 	ldr	r3, [pc, #20]	; 9150 <compute_volume+0x28>
+    9138:	e0030493 	mul	r3, r3, r4
+    913c:	e1a00003 	mov	r0, r3
+    9140:	e59f100c 	ldr	r1, [pc, #12]	; 9154 <compute_volume+0x2c>
+    9144:	ebffffe0 	bl	90cc <div>
+    9148:	e1a03000 	mov	r3, r0
+    914c:	e1a00003 	mov	r0, r3
+    9150:	0000058c 	.word	0x0000058c
+    9154:	00000153 	.word	0x00000153
+
+00009128 <compute_volume>:
+    9128:	e52de004 	push	{lr}		; (str lr, [sp, #-4]!)
+    912c:	e24dd014 	sub	sp, sp, #20
+    9130:	e58d0004 	str	r0, [sp, #4]
+    9134:	e59d3004 	ldr	r3, [sp, #4]
+    9138:	e59d2004 	ldr	r2, [sp, #4]
+    913c:	e0030392 	mul	r3, r2, r3
+    9140:	e59d2004 	ldr	r2, [sp, #4]
+    9144:	e0030392 	mul	r3, r2, r3
+    9148:	e58d300c 	str	r3, [sp, #12]
+    914c:	e59d300c 	ldr	r3, [sp, #12]
+    9150:	e59f201c 	ldr	r2, [pc, #28]	; 9174 <compute_volume+0x4c>
+    9154:	e0030392 	mul	r3, r2, r3
+    9158:	e1a00003 	mov	r0, r3
+    915c:	e59f1014 	ldr	r1, [pc, #20]	; 9178 <compute_volume+0x50>
+    9160:	ebffffd9 	bl	90cc <div>
+    9164:	e1a03000 	mov	r3, r0
+    9168:	e1a00003 	mov	r0, r3
+    916c:	e28dd014 	add	sp, sp, #20
+    9170:	e8bd8000 	pop	{pc}
+    9174:	0000058c 	.word	0x0000058c
+    9178:	00000153 	.word	0x00000153
+    
+=> Il n'y a pas de réservation d'espace pour les variables locales et les paramètres. Il n'y a pas le push de lr et le pop dans pc à la fin. L'instruction qui suit cette fonction sera donc celle à l'adresse suivante. 
+
+Question 2-10:
+Oui, il passe deux fois dans bidule (deux appels).
+
+Question 2-11:
+Veni, vidi, convici. 
+
+Question 2-12:
+	Dans le dossier tools : 
+	./run-test.sh SOURCEFILE SCRIPTFILE 
+	./run-test.sh ../test/kmain-bidule.c ../test/bidule-called-twice.gdb 	
+
+Question 3-1:
+Le processeur exécute le programme en mode SYSTEM.
+
+Question 3-2:
+Avant :
+	- CPSR -> 0x400001df
+	- SP -> 0x95fc
+	- LR -> 0x8098
+Après : 
+	- CPSR -> 0x400001d3
+	- SP -> 0x9410 
+	- LR -> 0x0
+	
+Question 3-3:
+Le LR passe à 0 car en mode Superviseur, ce n'est pas le même registre LR qui est utilisé (R14 passe à R14_svc). 
+
+Question 3-4:
+Après être passé en mode User, on ne peut pas passer directement en mode SVC. Le mode User n'est pas un mode privilégié, et pour passer en SVC, il faudrait qu'une interruption logicielle ait lieu. 
+
+Question 3-5:
+On ne va pas pouvoir à SPSR car le programme est lancé en mode System. Or, System ne possède pas ce registre, il est réservé au mode d'Exception.
+SPSR sert à stocker le CPSR d'avant l'exception pour le restituer au retour en mode System ou User.
+
+Question 4-7:
+Le problème est que l'on perd la valeur du LR qui nous permet de revenir à l'appelant dans l'exécution du code du handler.
+
+Question 4-8:
+Le registre SPSR n'existe pas en mode User ni System, donc il n'apparaît du côté droit de la figure de ldmfd. 
+
+Question 4-10:
+Il n'est pas nécessaire de sauvegarder le CPSR dans la pile car il est déjà sauvegardé au changement de mode dans SPSR.
+
+Question 4-12:
+Il faut ajouter l'attribut naked car quand on restitue le contexte avec ldmfd, le PC prend la valeur du LR sauvegardé. Or, dans la convention d'appel, gcc sauvegarde des registres au début de la fonction et les restitue à la fin. Ainsi, si on ne mets pas naked, on a une fuite de mémoire : à chaque fois gcc empile au début dans le prologue, mais gcc ne dépile jamais étant donné que l'on restitue le contexte avant l'épilogue et que donc gcc ne peut pas dépiler ce qui a été empilé dans le prologue. 
+
+Question 4-15:
+Etat de la pile SVC avec appel à sys_settime(16):
+{0x3, 0x0, 0x10, 0x0, 0x80a0, 0x80a4, 0x80b4, 0x80ac, 0x80a8, 0x80b0, 0x0, 0x0, 0x0, 0x84a8, 0x0,0x0}
+On retrouve la valeur 16, correspondant à 0x10, dans le début de la pile. 
+
+Question 4-16:
+Etat de la pile SVC après ajout de variables inutiles + calculs à sys_settime:
+{0x0, 0x0,	0x5, 0x34, 0x2,	0x2, 0x3, 0x0, 0x10, 0x0, 0x80a0, 0x80a4, 0x80b4, 0x80ac, 0x80a8, 0x80b0}
+-> La valeur 16 se retrouve plus loin dans la pile, derrière les variables locales juste créées.
+Il faut trouver un mécanisme nous permettant de retrouver facilement la valeur dans la pile, en enregistrant par exemple la valeur de SP au début de swi_handler pour ensuite retrouver date_ms en faisant un offset de 1 (4 octets). 
+
+Question 4-17:
+On va créer une variable globale static dans le fichier syscall qui stocke la valeur de SP au début de l'appel de swi_handler, juste après le store multiple (sauvegarde du contexte appelant)
+Dans la fonction do_sys_settime, on utilise cette variable pour retrouver la variable utilisateur date_ms sauvegardée au préalable (qui était dans r1), en utilisant un offset de 1 (décalage de 4 octets).
+
+Question 4- 
