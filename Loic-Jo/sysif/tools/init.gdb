@@ -15,6 +15,10 @@ b *kernel_panic
 b swi_handler
 
 b *kmain
+b *do_sys_yieldto
+b *user_process_1
+b *user_process_2
+b *sys_yieldto
 
 source utils.gdb
 

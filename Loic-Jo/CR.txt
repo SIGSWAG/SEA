@@ -152,4 +152,14 @@ Question 4-17:
 On va créer une variable globale static dans le fichier syscall qui stocke la valeur de SP au début de l'appel de swi_handler, juste après le store multiple (sauvegarde du contexte appelant)
 Dans la fonction do_sys_settime, on utilise cette variable pour retrouver la variable utilisateur date_ms sauvegardée au préalable (qui était dans r1), en utilisant un offset de 1 (décalage de 4 octets).
 
-Question 4- 
+Question 5-3:
+Afin de changer de contexte, il suffit d'enregistrer le processus courant dans la variable current_process, puis de modifier les valeurs de la pile qui correspondent aux registres de données + lr par les valeurs du processus destinaire. 
+Ainsi, quand swi_handler va mettre la nouvelle valeur de pc dans le ldmf, il va prendre la nouvelle valeur du LR du processus destinaire, et donc sauter à ce processus.
+
+Question 5-4:
+Il faut sauvegarder les adresses des fonctions dans les lr respectifs dans pcb de chaque process.
+
+Question 5-5(-6-7):
+Pas de problème ?!
+
+Question 5-

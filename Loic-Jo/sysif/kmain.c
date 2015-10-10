@@ -66,7 +66,8 @@ kmain(void){
 	//initialize p1 and p2
 	
 	//CODE
-	
+	pcb1.lr_user = (uint32_t) &user_process_1;
+	pcb2.lr_user = (uint32_t) &user_process_2;
 	
 	__asm("cps 0x10"); // switch CPU to USER mode
 	
