@@ -12,6 +12,10 @@ define printx
 		print /x $arg0
 end
 
+define hook-quit
+    set confirm off
+end
+
 define dump_top_of_stack
        print/x *((unsigned int*) $sp)@16
 end

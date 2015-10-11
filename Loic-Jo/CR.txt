@@ -159,7 +159,10 @@ Ainsi, quand swi_handler va mettre la nouvelle valeur de pc dans le ldmf, il va 
 Question 5-4:
 Il faut sauvegarder les adresses des fonctions dans les lr respectifs dans pcb de chaque process.
 
-Question 5-5(-6-7):
-Pas de problème ?!
+Question 5-5:
+Etant donné que l'on enregistre le contexte du processus courant, on enregistrait aussi le LR dans le processus courant, qui correspondait au LR_svc, et non au LR user - initialisé au début dans kmain. 
+Ainsi, on arrive bien à aller dans p1, qui est enregistré dans current_process, puis à aller dans p2, mais une fois que l'on veut retourner dans p1, le lr est passé à la valeur de LR_svc, ce qui nous fait retourner à l'appelant de l'interruption, c'est à dire p2. On reste donc bloqué dedans. 
 
-Question 5-
+Question 5-7
+Il suffit d'enregistrer dans le lr_svc du current process la valeur correspondant à lr dans la pile, et de mettre dans la pile la valeur de lr_user, qui ne bougera jamais pour le processus donné (initialisé au début). 
+

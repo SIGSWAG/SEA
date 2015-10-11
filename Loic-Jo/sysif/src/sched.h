@@ -17,11 +17,15 @@ struct pcb_s {
 	uint32_t r10;
 	uint32_t r11;
 	uint32_t r12;
-	//uint32_t sp;
+	uint32_t sp;
 	uint32_t lr_svc;
 	uint32_t lr_user;
 	//uint32_t cpsr;
 };
+
+typedef int (func_t) (void);
+
+struct pcb_s* create_process(func_t* entry);
 
 void sched_init();
 
