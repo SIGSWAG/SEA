@@ -165,4 +165,3 @@ Ainsi, on arrive bien à aller dans p1, qui est enregistré dans current_process
 
 Question 5-7
 Il suffit d'enregistrer dans le lr_svc du current process la valeur correspondant à lr dans la pile, et de mettre dans la pile la valeur de lr_user, qui ne bougera jamais pour le processus donné (initialisé au début). 
-
