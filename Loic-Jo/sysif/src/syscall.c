@@ -30,6 +30,9 @@ void __attribute__((naked)) swi_handler() {
 		case 5:
 			do_sys_yieldto(sp_param_base);
 			break;
+		case 6:
+			do_sys_yield(sp_param_base);
+			break;
 		default :
 			PANIC();
 	}

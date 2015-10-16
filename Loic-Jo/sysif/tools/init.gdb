@@ -15,15 +15,9 @@ b *kernel_panic
 b swi_handler
 
 b *kmain
-b *do_sys_yieldto
-b *user_process_1
-b *user_process_2
-b *sys_yieldto
-b syscall.c:39
-b sched.c:33
-b sched.c:41
-b kmain.c:44
-b kmain.c:55
+b *do_sys_yield
+b *user_process
+b *sys_yield
 
 source utils.gdb
 

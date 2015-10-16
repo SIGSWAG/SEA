@@ -10,20 +10,82 @@ uint32_t sp_user;
 void sched_init()
 {
 	current_process = &kmain_process;
+	current_process->next_pcb = current_process;
 	kheap_init();
 }
 
-struct pcb_s* create_process(func_t* entry) 
+void create_process(func_t* entry) 
 {
+	// Allocation de la place pour la pcb 
 	struct pcb_s * pcb = (struct pcb_s *) kAlloc(sizeof(struct pcb_s));
+	
+	// Mise en place du lr_svc, lr_user, et du cpsr
 	pcb->lr_svc = (uint32_t) entry;
 	pcb->lr_user = (uint32_t) entry;
 	__asm("mrs %0, cpsr" : "=r"(pcb->cpsr));
 	
+	// Allocation de la stack, et on fait pointer sp tout en haut de ce qu'on vient allouer vu que SP décroit
 	uint32_t * sp_zone = (uint32_t *) kAlloc(10000);
 	pcb->sp = (uint32_t) sp_zone + 10000;
 	
-	return pcb;
+	// On chaîne de manière circulaire current_process
+	struct pcb_s * temp_pcb = current_process->next_pcb;
+	current_process->next_pcb = pcb;
+	pcb->next_pcb = temp_pcb;
+	
+	return;
+}
+
+void elect() 
+{
+	current_process = current_process->next_pcb;
+}
+
+void sys_yield() 
+{
+	__asm("mov r0, #6");
+	__asm("SWI #0");
+}
+
+void do_sys_yield(uint32_t * sp_param_base) 
+{
+	// save lr_user and sp_user
+	__asm("cps #31"); // Mode système
+	__asm("mov %0, lr" : "=r"(current_process->lr_user)); 
+	__asm("mov %0, sp" : "=r"(current_process->sp));  
+	__asm("cps #19"); // Retour au mode SVC
+	
+	// Sauvegarde de spsr dans current_process
+	__asm("mrs %0, spsr" : "=r"(current_process->cpsr));
+	 
+	// save context into the current_process struct
+	int i;
+	for (i = 0; i < 13 ; i++) {
+		current_process->regs[i] = *(sp_param_base + i);
+	}
+	// Sauvegarde du LR_SVC
+	current_process->lr_svc = *(sp_param_base + 13);
+	
+	
+	//changement de proccess
+	elect();
+	
+		
+	// retrieve lr_user and sp_user
+	__asm("cps #31"); // Mode système
+	__asm("mov lr, %0" : : "r"(current_process->lr_user)); 
+	__asm("mov sp, %0" : : "r"(current_process->sp));  
+	__asm("cps #19"); // Retour au mode SVC
+	
+	// On met le cpsr du current process dans spsr
+	__asm("msr spsr, %0" : : "r"(current_process->cpsr));
+	
+	// retreive data from current_process struct into context
+	for (i = 0; i < 13 ; i++) {
+		*(sp_param_base + i) = current_process->regs[i];
+	}
+	// Restitution du LR_SVC
+	*(sp_param_base + 13) = current_process->lr_svc;
 }
 
 void sys_yieldto(struct pcb_s * dest)
@@ -54,18 +116,22 @@ void do_sys_yieldto(uint32_t * sp_param_base)
 		*(sp_param_base + i) = dest->regs[i];
 	}
 	
+	// Sauvegarde du LR_SVC
 	current_process->lr_svc = *(sp_param_base + 13);
 	*(sp_param_base + 13) = dest->lr_svc;
 	
-	__asm("mrs %0, spsr" : "=r"(current_process->cpsr)); // /** Bijour, ci moi la banane qui code :) **/
+	// Sauvegarde de spsr dans current_process
+	__asm("mrs %0, spsr" : "=r"(current_process->cpsr)); 
 	
+	//changement de proccess
 	 current_process = dest;
 	 
 	__asm("cps #31"); // Mode système
 	__asm("mov lr, %0" : : "r"(current_process->lr_user)); 
 	__asm("mov sp, %0" : : "r"(current_process->sp));  
 	__asm("cps #19"); // Retour au mode SVC
-	__asm("msr spsr, %0" : : "r"(current_process->cpsr));
 	
+	// On met le cpsr du current process dans spsr
+	__asm("msr spsr, %0" : : "r"(current_process->cpsr));
 }
 

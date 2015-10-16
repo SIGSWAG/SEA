@@ -12,13 +12,20 @@ struct pcb_s {
 	uint32_t lr_svc;
 	uint32_t lr_user;
 	uint32_t cpsr;
+	struct pcb_s * next_pcb;
 };
 
 typedef int (func_t) (void);
 
-struct pcb_s* create_process(func_t* entry);
+void create_process(func_t* entry);
 
 void sched_init();
+
+void elect();
+
+void sys_yield();
+
+void do_sys_yield();
 
 void sys_yieldto(struct pcb_s* dest);
 
