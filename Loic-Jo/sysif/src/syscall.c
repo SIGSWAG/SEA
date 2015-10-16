@@ -10,7 +10,13 @@ void __attribute__((naked)) swi_handler() {
 	// Sauvegarde du contexte 
 	__asm("stmfd sp!, {r0-r12, lr}");
 	//recuperation de l'adresse de SP 
-	__asm("mov %0, sp" : "=r"(sp_param_base)); 
+	__asm("mov %0, sp" : "=r"(sp_param_base));
+	
+	// mÉHTODE CRADE
+	__asm("cps #31"); // Mode système
+	__asm("mov %0, lr" : "=r"(current_process->lr_user)); 
+	__asm("mov %0, sp" : "=r"(current_process->sp));  
+	__asm("cps #19"); // Retour au mode SVC
 		
 	int code = 0;
 	__asm("mov %0, r0" : "=r"(code));
@@ -33,6 +39,11 @@ void __attribute__((naked)) swi_handler() {
 		default :
 			PANIC();
 	}
+	
+	__asm("cps #31"); // Mode système
+	__asm("mov lr, %0" : : "r"(current_process->lr_user)); 
+	__asm("mov sp, %0" : : "r"(current_process->sp));  
+	__asm("cps #19"); // Retour au mode SVC
 	
 	// Restitution du contexte et pop du lr sauvegardé avant dans le pc + changement de mode (retour vers le mode précédent)
 	// Le chapeau permet de restituer CPSR en utilisant le SPSR

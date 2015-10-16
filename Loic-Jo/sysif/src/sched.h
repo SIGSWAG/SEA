@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+struct pcb_s * current_process;
+
 struct pcb_s {
 	uint32_t r0;
 	uint32_t r1;

@@ -1,9 +1,11 @@
 #include "sched.h"
 #include "kheap.h"
 
-struct pcb_s * current_process;
-
 struct pcb_s kmain_process;
+
+uint32_t lr_user;
+uint32_t sp_user;
+
 
 void sched_init()
 {
@@ -17,7 +19,7 @@ struct pcb_s* create_process(func_t* entry)
 	pcb->lr_user = (uint32_t) entry;
 	
 	uint32_t * sp_zone = (uint32_t *) kAlloc(10000);
-	pcb->sp = (uint32_t) sp_zone;
+	pcb->sp = (uint32_t) sp_zone + 10000;
 	
 	return pcb;
 }
@@ -26,10 +28,10 @@ void sys_yieldto(struct pcb_s * dest)
 {
 	__asm("mov r0, #5");
 	__asm("mov r1, %0" : : "r"(dest));
-	// Save LR in R2 before switching to be able to use it in the context switch 
-	__asm("mov r2, r14");
-	__asm("mov r3, r13");
-	__asm("SWI #0");	
+	
+	__asm("SWI #0");
+	
+		
 	
 }
 
@@ -38,8 +40,6 @@ void do_sys_yieldto(uint32_t * sp_param_base)
 	// save context into the current_process struct
 	
 	struct pcb_s * dest = ((struct pcb_s *)*(sp_param_base + 1));
-	uint32_t lr_user = (uint32_t)*(sp_param_base + 2);
-	uint32_t sp_user = (uint32_t)*(sp_param_base + 3);
 	
 	//retreive data from current_process struct into context
 	
@@ -81,15 +81,6 @@ void do_sys_yieldto(uint32_t * sp_param_base)
 	
 	current_process->r12 = *(sp_param_base+12);
 	*(sp_param_base+12) = dest->r12;
-	
-	// Save in LR_svc the LR value in the stack
-	//~ current_process->lr_svc = *(sp_param_base+13);
-	current_process->lr_user = lr_user;
-	// Put in the stack the value of LR_user, so that we can come back to the process, and not the calling process (LR_svc)
-	*(sp_param_base+13) = dest->lr_user;
-	
-	current_process->sp = sp_user;
-	*sp_param_base = dest->sp;
 	
 	 current_process = dest;
 	
