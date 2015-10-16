@@ -1,6 +1,8 @@
 #include "sched.h"
 #include "kheap.h"
 
+#define SP_SIZE 10000
+
 struct pcb_s kmain_process;
 
 uint32_t lr_user;
@@ -25,8 +27,10 @@ void create_process(func_t* entry)
 	__asm("mrs %0, cpsr" : "=r"(pcb->cpsr));
 	
 	// Allocation de la stack, et on fait pointer sp tout en haut de ce qu'on vient allouer vu que SP décroit
-	uint32_t * sp_zone = (uint32_t *) kAlloc(10000);
-	pcb->sp = (uint32_t) sp_zone + 10000;
+	uint32_t * sp_zone = (uint32_t *) kAlloc(SP_SIZE);
+	pcb->sp = (uint32_t) sp_zone + SP_SIZE;
+	
+	pcb->isTerminated = 0;
 	
 	// On chaîne de manière circulaire current_process
 	struct pcb_s * temp_pcb = current_process->next_pcb;
@@ -38,7 +42,15 @@ void create_process(func_t* entry)
 
 void elect() 
 {
-	current_process = current_process->next_pcb;
+	struct pcb_s * last_process = current_process;
+	while(current_process->isTerminated) {
+		last_process->next_pcb = current_process->next_pcb;
+		current_process = current_process->next_pcb;
+	}
+	
+	if(current_process == last_process) {
+		current_process = current_process->next_pcb;
+	}
 }
 
 void sys_yield() 
@@ -86,6 +98,25 @@ void do_sys_yield(uint32_t * sp_param_base)
 	}
 	// Restitution du LR_SVC
 	*(sp_param_base + 13) = current_process->lr_svc;
+}
+
+int sys_exit(int status) 
+{
+	__asm("mov r0, #7");
+	__asm("mov r1, %0" : : "r"(status));
+	current_process->isTerminated = 1;
+	__asm("SWI #0");
+	
+	return status;
+}
+
+void do_sys_exit()
+{	
+	uint32_t sp = current_process->sp;
+	// Libération de la zone mémoire allouée
+	kFree((void*)&sp, SP_SIZE);
+	kFree((void*)current_process, sizeof(struct pcb_s));
+	
 }
 
 void sys_yieldto(struct pcb_s * dest)

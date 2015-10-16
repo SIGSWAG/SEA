@@ -176,3 +176,10 @@ Question 5-15:
 Le noyeau ne permet pas à une application de choisir à qui elle passe la main :
 - On ne sait pas toujours vers quel process on veut aller (ex : ordonnancement préemptif)
 - Isolation : on ne doit pas avoir accès aux PCB des autres process, et même sa propre PCB
+
+Question 6-5:
+
+Question 6-6:
+On peut faire recours à une liste doublement chaînée pour avoir accès à la pcb précédente. 
+
+Question 6-:

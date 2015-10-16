@@ -7,11 +7,12 @@
 void
 user_process()
 {
-	int v=0;
-	while(1){
+	int v = 0;
+	while( v < 5 ) {
 		v++;
 		sys_yield();
 	}
+	sys_exit();
 }
 
 

@@ -15,9 +15,11 @@ b *kernel_panic
 b swi_handler
 
 b *kmain
-b *do_sys_yield
 b *user_process
-b *sys_yield
+b sched.c:47
+b *sys_exit
+b *do_sys_exit
+b kmain.c:15
 
 source utils.gdb
 

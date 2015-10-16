@@ -13,6 +13,8 @@ struct pcb_s {
 	uint32_t lr_user;
 	uint32_t cpsr;
 	struct pcb_s * next_pcb;
+	int isTerminated;
+	int returnCode;
 };
 
 typedef int (func_t) (void);
@@ -30,5 +32,9 @@ void do_sys_yield();
 void sys_yieldto(struct pcb_s* dest);
 
 void do_sys_yieldto(uint32_t * sp_param_base);
+
+int sys_exit();
+
+void do_sys_exit();
 
 #endif
