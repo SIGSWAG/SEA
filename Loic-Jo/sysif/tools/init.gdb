@@ -19,6 +19,11 @@ b *do_sys_yieldto
 b *user_process_1
 b *user_process_2
 b *sys_yieldto
+b syscall.c:39
+b sched.c:33
+b sched.c:41
+b kmain.c:44
+b kmain.c:55
 
 source utils.gdb
 

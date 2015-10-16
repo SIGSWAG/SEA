@@ -163,6 +163,16 @@ Question 5-5:
 Etant donné que l'on enregistre le contexte du processus courant, on enregistrait aussi le LR dans le processus courant, qui correspondait au LR_svc, et non au LR user - initialisé au début dans kmain. 
 Ainsi, on arrive bien à aller dans p1, qui est enregistré dans current_process, puis à aller dans p2, mais une fois que l'on veut retourner dans p1, le lr est passé à la valeur de LR_svc, ce qui nous fait retourner à l'appelant de l'interruption, c'est à dire p2. On reste donc bloqué dedans. 
 
-Question 5-7
+Question 5-7:
 Il suffit d'enregistrer dans le lr_svc du current process la valeur correspondant à lr dans la pile, et de mettre dans la pile la valeur de lr_user, qui ne bougera jamais pour le processus donné (initialisé au début). 
-a
+
+Question 5-8:
+On constate que les valeurs de v1 et v2 sont aberrantes, on ne retrouve pas les valeurs attendues. Ceci est dû au fait que la pile est actuellement partagée entre le process 1 & 2
+
+Question 5-11:
+Le SP doit pointer à la fin de l'espace alloué (à l'adresse la plus grande), étant donné que la pile descend vers le bas. 
+
+Question 5-15:
+Le noyeau ne permet pas à une application de choisir à qui elle passe la main :
+- On ne sait pas toujours vers quel process on veut aller (ex : ordonnancement préemptif)
+- Isolation : on ne doit pas avoir accès aux PCB des autres process, et même sa propre PCB
