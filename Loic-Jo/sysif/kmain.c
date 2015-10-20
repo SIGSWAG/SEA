@@ -12,7 +12,7 @@ user_process()
 		v++;
 		sys_yield();
 	}
-	sys_exit();
+	sys_exit(0);
 }
 
 

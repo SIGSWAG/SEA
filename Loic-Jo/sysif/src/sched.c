@@ -1,5 +1,6 @@
 #include "sched.h"
 #include "kheap.h"
+#include "hw.h"
 
 #define SP_SIZE 10000
 
@@ -46,6 +47,9 @@ void elect()
 	while(current_process->isTerminated) {
 		last_process->next_pcb = current_process->next_pcb;
 		current_process = current_process->next_pcb;
+		if(current_process == last_process) {
+			terminate_kernel();
+		}
 	}
 	
 	if(current_process == last_process) {
@@ -103,8 +107,8 @@ void do_sys_yield(uint32_t * sp_param_base)
 int sys_exit(int status) 
 {
 	__asm("mov r0, #7");
-	__asm("mov r1, %0" : : "r"(status));
 	current_process->isTerminated = 1;
+	current_process->returnCode = status;
 	__asm("SWI #0");
 	
 	return status;

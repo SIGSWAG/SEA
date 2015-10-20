@@ -33,7 +33,7 @@ void sys_yieldto(struct pcb_s* dest);
 
 void do_sys_yieldto(uint32_t * sp_param_base);
 
-int sys_exit();
+int sys_exit(int status);
 
 void do_sys_exit();
 
