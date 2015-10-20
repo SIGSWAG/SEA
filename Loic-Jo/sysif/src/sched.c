@@ -43,18 +43,7 @@ void create_process(func_t* entry)
 
 void elect() 
 {
-	struct pcb_s * last_process = current_process;
-	while(current_process->isTerminated) {
-		last_process->next_pcb = current_process->next_pcb;
-		current_process = current_process->next_pcb;
-		if(current_process == last_process) {
-			terminate_kernel();
-		}
-	}
-	
-	if(current_process == last_process) {
-		current_process = current_process->next_pcb;
-	}
+	current_process = current_process->next_pcb;
 }
 
 void sys_yield() 
