@@ -31,7 +31,7 @@ void create_process(func_t* entry)
 	uint32_t * sp_zone = (uint32_t *) kAlloc(SP_SIZE);
 	pcb->sp = (uint32_t) sp_zone + SP_SIZE;
 	
-	pcb->isTerminated = 0;
+	pcb->status = PROCESS_RUNNING;
 	
 	// On chaîne de manière circulaire current_process
 	struct pcb_s * temp_pcb = current_process->next_pcb;
@@ -41,9 +41,23 @@ void create_process(func_t* entry)
 	return;
 }
 
+
 void elect() 
 {
+	// on kill tous les TERMINATED
+	while(current_process->next_pcb->status == PROCESS_TERMINATED){
+		struct pcb_s * process_to_kill = current_process->next_pcb;
+		// on referme la chaine
+		current_process->next_pcb = current_process->next_pcb->next_pcb;
+		
+		// kill next_process
+		// on considère (voir implentation de kalloc/kFree) que la mémoire est organisée telle que pcb et la stack sp sont contigus.
+		// de plus pcb doit être situé en dessous de la stack. On libère alors la taille de la structure et de sa stack d'un seul coup.
+		kFree(process_to_kill, SP_SIZE + sizeof(struct pcb_s));
+	}
+	
 	current_process = current_process->next_pcb;
+	
 }
 
 void sys_yield() 
