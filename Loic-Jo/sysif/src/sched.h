@@ -6,24 +6,29 @@
 // Process status
 #define PROCESS_TERMINATED 0
 #define PROCESS_RUNNING 1
+#define PROCESS_WAITING 2
+#define PROCESS_CREATED 3
+
+typedef int (func_t) (void);
 
 struct pcb_s * current_process;
 
 struct pcb_s {
-
 	uint32_t regs[13];
 	uint32_t sp;
 	uint32_t lr_svc;
 	uint32_t lr_user;
 	uint32_t cpsr;
-	struct pcb_s * next_pcb;
 	int status;
 	int returnCode;
+
+	func_t * entry;
+	struct pcb_s * next_pcb;
 };
 
-typedef int (func_t) (void);
-
 void create_process(func_t* entry);
+
+void start_current_process();
 
 void sched_init();
 

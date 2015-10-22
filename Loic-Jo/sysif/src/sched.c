@@ -12,10 +12,14 @@ uint32_t sp_user;
 
 void sched_init()
 {
+	// initialisation du process kmain
 	kmain_process.next_pcb = &kmain_process;
 	kmain_process.status = PROCESS_RUNNING;
 	current_process = &kmain_process;
+
 	kheap_init();
+
+	// timer_init();
 }
 
 void create_process(func_t* entry) 
@@ -24,15 +28,16 @@ void create_process(func_t* entry)
 	struct pcb_s * pcb = (struct pcb_s *) kAlloc(sizeof(struct pcb_s));
 	
 	// Mise en place du lr_svc, lr_user, et du cpsr
-	pcb->lr_svc = (uint32_t) entry;
-	pcb->lr_user = (uint32_t) entry;
+	pcb->lr_svc = (uint32_t)&start_current_process;
+	pcb->lr_user = (uint32_t)&start_current_process;
+	pcb->entry = entry;
 	__asm("mrs %0, cpsr" : "=r"(pcb->cpsr));
 	
 	// Allocation de la stack, et on fait pointer sp tout en haut de ce qu'on vient allouer vu que SP décroit
 	uint32_t * sp_zone = (uint32_t *) kAlloc(SP_SIZE);
 	pcb->sp = (uint32_t) sp_zone + SP_SIZE;
 	
-	pcb->status = PROCESS_RUNNING;
+	pcb->status = PROCESS_CREATED;
 	
 	// On chaîne de manière circulaire current_process
 	struct pcb_s * temp_pcb = current_process->next_pcb;
@@ -42,6 +47,11 @@ void create_process(func_t* entry)
 	return;
 }
 
+void start_current_process()
+{
+	current_process->entry();
+	sys_exit(0);
+}
 
 void elect() 
 {
@@ -54,10 +64,24 @@ void elect()
 		// kill next_process
 		// on considère (voir implentation de kalloc/kFree) que la mémoire est organisée telle que pcb et la stack sp sont contigus.
 		// de plus pcb doit être situé en dessous de la stack. On libère alors la taille de la structure et de sa stack d'un seul coup.
-		kFree((void *)process_to_kill, SP_SIZE + sizeof(struct pcb_s));
+		kFree((void *)process_to_kill, sizeof(struct pcb_s) + SP_SIZE);
+
+		// S'il ne reste qu'un process dans la boucle (main)
+		if(current_process->next_pcb == current_process){
+			terminate_kernel();
+		}
 	}
-	
+	if(current_process->status != PROCESS_TERMINATED){
+		current_process->status = PROCESS_WAITING;
+	}
 	current_process = current_process->next_pcb;
+	/*
+	if(current_process->status == CREATED){
+		// First time the process run
+		// call start_current_process somehow
+	}
+	*/
+	current_process->status = PROCESS_RUNNING;
 	
 }
 
@@ -120,12 +144,25 @@ int sys_exit(int status)
 
 void do_sys_exit(uint32_t * sp_param_base)
 {	
-	/*
-	uint32_t sp = current_process->sp;
-	// Libération de la zone mémoire allouée
-	kFree((void*)&sp, SP_SIZE);
-	kFree((void*)current_process, sizeof(struct pcb_s));
-	*/
+	// Changement de process
+	elect();
+
+	// retrieve lr_user and sp_user
+	__asm("cps #31"); // Mode système
+	__asm("mov lr, %0" : : "r"(current_process->lr_user)); 
+	__asm("mov sp, %0" : : "r"(current_process->sp));  
+	__asm("cps #19"); // Retour au mode SVC
+	
+	// On met le cpsr du current process dans spsr
+	__asm("msr spsr, %0" : : "r"(current_process->cpsr));
+	
+	int i = 0;
+	// retreive data from current_process struct into context
+	for (i = 0; i < 13 ; i++) {
+		*(sp_param_base + i) = current_process->regs[i];
+	}
+	// Restitution du LR_SVC
+	*(sp_param_base + 13) = current_process->lr_svc;
 }
 
 void sys_yieldto(struct pcb_s * dest)

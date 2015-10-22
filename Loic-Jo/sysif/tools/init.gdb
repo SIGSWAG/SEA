@@ -16,10 +16,12 @@ b swi_handler
 
 
 b *kmain
-b sched.c:47
+b *elect
 b *sys_exit
 b *do_sys_exit
 b kmain.c:15
+b kmain.c:12
+b *start_current_process
 
 source utils.gdb
 
