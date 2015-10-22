@@ -14,8 +14,8 @@ b kernel_panic
 b *kernel_panic
 b swi_handler
 
+
 b *kmain
-b *user_process
 b sched.c:47
 b *sys_exit
 b *do_sys_exit

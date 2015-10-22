@@ -12,8 +12,9 @@ uint32_t sp_user;
 
 void sched_init()
 {
+	kmain_process.next_pcb = &kmain_process;
+	kmain_process.status = PROCESS_RUNNING;
 	current_process = &kmain_process;
-	current_process->next_pcb = current_process;
 	kheap_init();
 }
 
@@ -44,7 +45,7 @@ void create_process(func_t* entry)
 
 void elect() 
 {
-	// on kill tous les TERMINATED
+	// on kill tous les PROCESS_TERMINATED
 	while(current_process->next_pcb->status == PROCESS_TERMINATED){
 		struct pcb_s * process_to_kill = current_process->next_pcb;
 		// on referme la chaine
@@ -53,7 +54,7 @@ void elect()
 		// kill next_process
 		// on considère (voir implentation de kalloc/kFree) que la mémoire est organisée telle que pcb et la stack sp sont contigus.
 		// de plus pcb doit être situé en dessous de la stack. On libère alors la taille de la structure et de sa stack d'un seul coup.
-		kFree(process_to_kill, SP_SIZE + sizeof(struct pcb_s));
+		kFree((void *)process_to_kill, SP_SIZE + sizeof(struct pcb_s));
 	}
 	
 	current_process = current_process->next_pcb;
@@ -110,20 +111,21 @@ void do_sys_yield(uint32_t * sp_param_base)
 int sys_exit(int status) 
 {
 	__asm("mov r0, #7");
-	current_process->isTerminated = 1;
+	current_process->status = PROCESS_TERMINATED;
 	current_process->returnCode = status;
 	__asm("SWI #0");
 	
 	return status;
 }
 
-void do_sys_exit()
+void do_sys_exit(uint32_t * sp_param_base)
 {	
+	/*
 	uint32_t sp = current_process->sp;
 	// Libération de la zone mémoire allouée
 	kFree((void*)&sp, SP_SIZE);
 	kFree((void*)current_process, sizeof(struct pcb_s));
-	
+	*/
 }
 
 void sys_yieldto(struct pcb_s * dest)

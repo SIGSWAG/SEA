@@ -180,6 +180,7 @@ Le noyeau ne permet pas à une application de choisir à qui elle passe la main 
 Question 6-5:
 
 Question 6-6:
+
 On peut faire recours à une liste doublement chaînée pour avoir accès à la pcb précédente. 
 
 Question 6-:

@@ -12,7 +12,7 @@ struct pcb_s * current_process;
 struct pcb_s {
 
 	uint32_t regs[13];
-	uint32_t sp[10000];
+	uint32_t sp;
 	uint32_t lr_svc;
 	uint32_t lr_user;
 	uint32_t cpsr;
@@ -39,6 +39,6 @@ void do_sys_yieldto(uint32_t * sp_param_base);
 
 int sys_exit(int status);
 
-void do_sys_exit();
+void do_sys_exit(uint32_t * sp_param_base);
 
 #endif

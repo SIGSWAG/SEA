@@ -2,13 +2,13 @@
 #include "util.h"
 #include "sched.h"
 
-#define NB_PROCESS 5
+#define NB_PROCESS 3
 
 void
 user_process()
 {
 	int v = 0;
-	while( v < 5 ) {
+	while( v < 3 ) {
 		v++;
 		sys_yield();
 	}

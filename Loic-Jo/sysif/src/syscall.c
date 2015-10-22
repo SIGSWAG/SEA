@@ -34,7 +34,7 @@ void __attribute__((naked)) swi_handler() {
 			do_sys_yield(sp_param_base);
 			break;
 		case 7:
-			do_sys_exit();
+			do_sys_exit(sp_param_base);
 			break;
 		default :
 			PANIC();
