@@ -11,13 +11,17 @@ struct pcb_s
 	func_t* lr_svc;
 	uint32_t* sp;
 	uint32_t* cpsr;
+	struct pcb_s* next;
 };
 
 void do_sys_yieldto(void);
+void do_sys_yield(void);
 
 void sys_yieldto(struct pcb_s* dest);
+void sys_yield();
 
 void sched_init(void);
-struct pcb_s* create_process(func_t* entry);
+void create_process(func_t* entry);
+void elect();
 
 #endif
