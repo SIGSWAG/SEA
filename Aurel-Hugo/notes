@@ -1,0 +1,42 @@
+BON A SAVOIR
+
+r0-r12 : registres
+r13 : sp
+r14 : lr (link register)
+CPSR : Current Program Status Register - registre de status (pour les privilèges)
+cps #<num>(Change Processor State) copie la valeur num dans les bits 0 à 4 de CPSR.
+msr <reg> copie le contenu entier du registre <reg> dans le CPSR
+
+STR = STore Register, stocke un registre dans la pile
+LDR = LoaD Register, charge une variable depuis la pile
+
+print/x $r4 : affiche r4
+print/x *0x1234 : affiche memoire
+b : jump
+bl : jump avec sauvegarde adresse retour (lr)
+print/x *((unsigned int*) $sp) : caste $sp en tableau et affiche la 1è case
+print/x *(((unsigned int*) $sp)+1) : caste $sp en tableau et affiche la 2è case
+@nb : prend plusieurs cases du tableau, ex : print/x *((unsigned int*) $sp)@16
+
+
+p/t : binaire
+p/s : decimal
+p/x : hexa
+
+
+3-1 En mode Système
+3-2 __asm("cps #0b10011");
+3-3 
+
+4-8 
+
+
+Partie 4 kmain.c :
+	volatile uint64_t date_ms = 0;
+	__asm("cps 0x10"); // met en mode user
+	sys_settime(0xCACABEBEBABA);
+	date_ms = sys_gettime();
+	sys_settime(date_ms);
+	sys_nop();
+	sys_reboot();
+	return 0;
