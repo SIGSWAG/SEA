@@ -6,6 +6,10 @@ struct pcb_s kmain_process;
 
 extern unsigned int* sp_sauv;
 
+#define SIZE_OF_PROCESS_STACK_OCTETS 10000
+
+/* SYS_ACTION */
+
 void
 sys_yieldto(struct pcb_s* dest)
 {
@@ -26,8 +30,19 @@ sys_yield(void)
 	__asm("mov %0, sp" : "=r"(current_process->sp));
 	__asm("swi #0");
 	__asm("mov sp, %0" : : "r"(current_process->sp));
-	__asm("mov lr, %0" : : "r"(current_process->lr_user)); // current_process est maintenant "dest"
+	__asm("mov lr, %0" : : "r"(current_process->lr_user));
 }
+
+void
+sys_exit(int status)
+{
+	__asm("mov r0, #7");
+	__asm("swi #0");
+	__asm("mov sp, %0" : : "r"(current_process->sp));
+	__asm("mov lr, %0" : : "r"(current_process->lr_user));
+}
+
+/* DO_SYS_ACTION */
 
 void
 do_sys_yieldto(void)
@@ -59,7 +74,7 @@ do_sys_yield(void)
 	int i;
 	for(i=0 ; i<13 ; i++)
 	{
-		// on enregistre les registres courant
+		// on enregistre les registres courants
 		old_process->registres[i] = sp_sauv[i];
 		// puis on charge les registres du nouveau processus
 		sp_sauv[i] = current_process->registres[i];
@@ -70,12 +85,39 @@ do_sys_yield(void)
 	__asm("msr SPSR, %0" : : "r"(current_process->cpsr));
 }
 
+
+void
+do_sys_exit()
+{
+	current_process->etat = TERMINATED;
+	current_process->previous->next = current_process->next;
+	current_process->next->previous = current_process->previous;
+	struct pcb_s* to_delete = current_process;
+	elect();
+	kFree((void *)to_delete->sp, SIZE_OF_PROCESS_STACK_OCTETS);
+	kFree((void *)to_delete, sizeof(struct pcb_s));
+	// ici tout est propre mais il faut encore que l'on change de contexte
+	// on passe donc au processus suivant
+	int i;
+	for(i=0 ; i<13 ; i++)
+	{
+		// puis on charge les registres du nouveau processus
+		sp_sauv[i] = current_process->registres[i];
+	}
+	// puis on restaure le CPSR du nouveau processus
+	__asm("msr SPSR, %0" : : "r"(current_process->cpsr));
+}
+
+/* Autre */
+
 void
 sched_init(void)
 {
 	kheap_init();
 	current_process = &kmain_process;
 	current_process->next = current_process;
+	current_process->previous = current_process;
+	current_process->etat = RUNNING;
 }
 
 void
@@ -83,14 +125,21 @@ create_process(func_t* entry)
 {
 	struct pcb_s* pcb_res = (struct pcb_s*) kAlloc(sizeof(struct pcb_s));
 	pcb_res->lr_user = entry;
-	pcb_res->sp = (uint32_t*) (kAlloc( 10000 ) + sizeof(uint8_t)*10000);
+	pcb_res->sp = (uint32_t*) (kAlloc(SIZE_OF_PROCESS_STACK_OCTETS) + sizeof(uint8_t)*SIZE_OF_PROCESS_STACK_OCTETS);
 	struct pcb_s* pcb_res_next = current_process->next;
+	
 	current_process->next = pcb_res;
+	pcb_res->previous = current_process;
+
 	pcb_res->next = pcb_res_next;
+	pcb_res_next->previous = pcb_res;
 }
 
 void
 elect()
 {
+	// si le processus courant tournait, alors on l'arrete
+	current_process->etat = (current_process->etat==RUNNING) ? READY : current_process->etat;
 	current_process = current_process->next;
+	current_process->etat = RUNNING;
 }
