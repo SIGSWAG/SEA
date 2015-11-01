@@ -3,7 +3,7 @@
 #include "sched.h"
 #define NB_PROCESS 5
 
-void user_process()
+void user_process(void)
 {
 	int v=0;
 	for(;;)
@@ -13,10 +13,10 @@ void user_process()
 	}
 }
 
-void user_process_stopping()
+void user_process_stopping(void)
 {
 	int v=0;
-	while(v<1)
+	while(v<2)
 	{
 		v++;
 		sys_yield();

@@ -89,8 +89,8 @@ swi_handler(void)
 		case 3: do_sys_settime(); break;
 		case 4:	do_sys_gettime(); break;
 		case 5:	do_sys_yieldto(); break;
-		case 6:	do_sys_yield(); break;
-		case 7:	do_sys_exit(); break;
+		case 6:	do_sys_yield();   break;
+		case 7:	do_sys_exit();    break;
 		default: PANIC();
 	}
 	__asm("ldmfd sp!, {r0-r12, pc}^");
