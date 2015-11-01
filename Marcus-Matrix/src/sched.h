@@ -51,6 +51,7 @@ struct pcb_s
     struct pcb_s* suivao;
 
     void* debut_pile;
+    int code_retour;
 };
 
 typedef int (func_t) (void);

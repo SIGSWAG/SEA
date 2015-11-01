@@ -14,6 +14,8 @@
 //------------------------------------------------------ Include personnel
 #include "sched.h"
 #include "kheap.h"
+#include "hw.h"
+#include "asm_tools.h"
 
 ///////////////////////////////////////////////////////////////////  PRIVE
 //------------------------------------------------------------- Constantes
@@ -25,6 +27,8 @@
 //---------------------------------------------------- Variables statiques
 struct pcb_s *current_process; //the current process
 struct pcb_s kmain_process; //the main process, à initialiser
+int stackPointer2;
+int lr_irq;
 
 //------------------------------------------------------ Fonctions privées
 //static type nom ( liste de paramètres )
@@ -44,6 +48,45 @@ void pouetpouet();
 
 void elect();
 
+void irq_handler()
+{
+
+
+
+    __asm("mov %0, lr":"=r"(lr_irq));
+
+    /** On passe en SVC **/
+    __asm("cps 0x13"); // switch CPU to SVC mode
+
+    /** On met les registres dans la pile **/
+    __asm("push {%0}"::"r"(lr_irq-4));
+    __asm("stmfd sp!, {r0-r12}");
+
+    __asm("mov %0, sp":"=r"(stackPointer2));
+
+    /** Changement de contexte **/
+
+    do_sys_yield(stackPointer2);
+
+
+    /** On restaure les registres **/
+    __asm("ldmfd sp!, {r0-r12}");
+    __asm("pop {%0}":"=r"(lr_irq));
+
+
+
+    set_next_tick_default();
+    ENABLE_TIMER_IRQ();
+    ENABLE_IRQ();
+
+
+    __asm("cps 0x10"); // switch CPU to USER mode
+
+    __asm("mov pc, %0"::"r"(lr_irq));
+
+
+}
+
 void sys_exit(int status)
 {
     int call = SYS_EXIT;
@@ -60,15 +103,31 @@ void do_sys_exit(int stackPointer)
 {
     struct pcb_s* zombie = current_process;
 
-    do_sys_yield(stackPointer);
+    int plus_de_process = 1;
 
-    zombie->precedao->suivao = zombie->suivao;
-    zombie->suivao->precedao = zombie->precedao;
-    /** Et pis c'est tout **/
+    if(zombie->suivao!=zombie)
+    {
+
+        do_sys_yield(stackPointer);
+
+        zombie->precedao->suivao = zombie->suivao;
+        zombie->suivao->precedao = zombie->precedao;
+        /** Et pis c'est tout **/
+
+        plus_de_process = 0;
+
+    }
 
     /** On free la stack, et le PCB t'as vu? **/
     kFree(zombie->debut_pile, 10*1024);
     kFree((uint8_t*)zombie, sizeof(struct pcb_s));
+
+    if(plus_de_process)
+    {
+        terminate_kernel();
+    }
+
+    /** WESH ON STOCKE OU LE CODE DE RETOUR SI ON LIBERE LE PCB??? **/
 }
 
 void sys_yield()
@@ -130,6 +189,7 @@ void do_sys_yield(int stackPointer)
 
 void sched_init()
 {
+
     ////////** Initialisaçao de la liste **///////
     /** Bijour, ci moi la banane qui code :) **/
     kmain_process.precedao = &kmain_process;
@@ -151,7 +211,7 @@ void create_process(func_t* entry)
 
     result->sp = stack + 2560; //beginning of the stack (empty)
     result->lr_svc=(int)entry;
-    result->cpsr_user=0x1d0;
+    result->cpsr_user=0x150; //1 0 1 0 10000
 
     result->debut_pile = stack;
     /** On met le nouveau processao dans la liste **/
