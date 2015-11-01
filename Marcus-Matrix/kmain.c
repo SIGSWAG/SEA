@@ -2,6 +2,9 @@
 #include "syscall.h"
 #include "util.h"
 #include "sched.h"
+#include "hw.h"
+#include "asm_tools.h"
+
 
 #define NB_PROCESS 5
 
@@ -40,11 +43,31 @@ struct pcb_s *p1, *p2; //pointeurs vers pcb1, pcb2
 void user_process_1()
 {
 
-    int v1 = 5;
+    int v1=5;
+    int v2=5;
+    int v3=5;
+    int v4=5;
+    int v5=5;
+    int v6=5;
+    int v7=5;
+    int v8=5;
+    int v9=5;
+    int v10=5;
     while(1)
     {
+
+
         v1++;
-        sys_yieldto(p2);
+        v2++;
+        v3++;
+        v4++;
+        v5++;
+        v6++;
+        v7++;
+        v8++;
+        v9++;
+        v10++;
+        //sys_yieldto(p2);
 
     }
 
@@ -58,7 +81,20 @@ void user_process_2()
     while(1)
     {
         v2-=2;
-        sys_yieldto(p1);
+        //sys_yieldto(p1);
+
+    }
+
+
+}
+
+void user_process_3()
+{
+
+    int v3 = 0;
+    while(1)
+    {
+        v3+=5;
 
     }
 
@@ -104,20 +140,33 @@ int kmain (void)
     p1=create_process((func_t*) &user_process_1);
     p2=create_process((func_t*) &user_process_2);
 **/
+    /** ENCULEEEE **/
+    create_process((func_t*)&user_process_1);
+    create_process((func_t*)&user_process_2);
+    create_process((func_t*)&user_process_3);
 
-    int i;
+    timer_init();
+    ENABLE_IRQ();
+
+
+    /*int i;
     for(i=0;i<NB_PROCESS;i++)
     {
         create_process((func_t*)&user_process);
-        /** ENCULEEEE **/
-    }
+
+    }*/
     __asm("cps 0x10");
+
+
 
    //**//**//**// sys_yieldto(p1); //laisse la main à p1
 
-    while(1)
+    int i=0;
+
+    while(i<100)
     {
         sys_yield();
+        i++;
     }
 
     //**PANIC();
@@ -126,5 +175,9 @@ int kmain (void)
 	dummy();
     volume = compute_volume(radius);*/
 
+    sys_exit(0);
+
+
+    /** Bonjour, je suis un return, mais jamais on ne m'exécute moi :( **/
     return 0;
 }
