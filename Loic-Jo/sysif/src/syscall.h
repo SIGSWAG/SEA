@@ -21,4 +21,6 @@ uint64_t sys_gettime();
 
 void do_sys_gettime();
 
+void irq_handler();
+
 #endif

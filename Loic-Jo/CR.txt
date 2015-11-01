@@ -183,4 +183,6 @@ Question 6-6:
 
 On peut faire recours à une liste doublement chaînée pour avoir accès à la pcb précédente. 
 
-Question 6-:
+Question 7-4:
+On a R13_irq (SP), R14_irq (LR), et SPSR_irq qui sont spécifiques au mode Interrupt
+

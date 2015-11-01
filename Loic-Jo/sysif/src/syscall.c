@@ -2,8 +2,44 @@
 #include "sched.h"
 #include "util.h"
 #include "hw.h"
+#include "asm_tools.h"
 
 static uint32_t * sp_param_base;
+static uint32_t lr_irq;
+
+void __attribute__((naked)) irq_handler() {
+	__asm("mov %0, lr" : "=r"(lr_irq));
+	
+	// Switch to SVC
+	__asm("cps 0x13");
+	
+	// On push lr_irq - 4 dans la pile
+	__asm("push {%0}": : "r"(lr_irq - 4));
+	// Sauvegarde du contexte
+	__asm("stmfd sp!, {r0-r12}");
+	
+	//recuperation de l'adresse de SP 
+	__asm("mov %0, sp" : "=r"(sp_param_base));
+	
+	// Changement de contexte
+	do_sys_yield(sp_param_base);
+	
+	// Restitution du contexte
+	__asm("ldmfd sp!, {r0-r12}");
+	// On récupère lr_irq (on l'a pushé avant)
+	__asm("pop {%0}" : "=r"(lr_irq));
+	
+	// On réarme le timer + active les interruptions
+	set_next_tick_default();
+	ENABLE_TIMER_IRQ();
+	ENABLE_IRQ();
+	
+	// Switch to user
+	__asm("cps 0x10");
+	
+	// On jump au lr_irq (décrémenté de 4 avant)
+	__asm("mov pc, %0": :"r"(lr_irq));
+}
 
 void __attribute__((naked)) swi_handler() {
 	

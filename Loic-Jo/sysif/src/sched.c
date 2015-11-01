@@ -18,8 +18,6 @@ void sched_init()
 	current_process = &kmain_process;
 
 	kheap_init();
-
-	// timer_init();
 }
 
 void create_process(func_t* entry) 
@@ -31,7 +29,8 @@ void create_process(func_t* entry)
 	pcb->lr_svc = (uint32_t)&start_current_process;
 	pcb->lr_user = (uint32_t)&start_current_process;
 	pcb->entry = entry;
-	__asm("mrs %0, cpsr" : "=r"(pcb->cpsr));
+	pcb->cpsr = 0x150; //1010 10000 -> User mode + no interrupt
+	//__asm("mrs %0, cpsr" : "=r"(pcb->cpsr));
 	
 	// Allocation de la stack, et on fait pointer sp tout en haut de ce qu'on vient allouer vu que SP décroit
 	uint32_t * sp_zone = (uint32_t *) kAlloc(SP_SIZE);
