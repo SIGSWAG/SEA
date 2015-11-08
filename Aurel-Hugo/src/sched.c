@@ -16,22 +16,14 @@ sys_yieldto(struct pcb_s* dest)
 {
 	__asm("mov r0, #5");
 	__asm("mov r1, %0" : : "r"(dest));
-	__asm("mov %0, lr" : "=r"(current_process->lr_user));
-	__asm("mov %0, sp" : "=r"(current_process->sp));
 	__asm("swi #0");
-	__asm("mov sp, %0" : : "r"(current_process->sp));
-	__asm("mov lr, %0" : : "r"(current_process->lr_user)); // current_process est maintenant "dest"
 }
 
 void
 sys_yield(void)
 {
 	__asm("mov r0, #6");
-	__asm("mov %0, lr" : "=r"(current_process->lr_user));
-	__asm("mov %0, sp" : "=r"(current_process->sp));
 	__asm("swi #0");
-	__asm("mov sp, %0" : : "r"(current_process->sp));
-	__asm("mov lr, %0" : : "r"(current_process->lr_user));
 }
 
 int
@@ -40,8 +32,6 @@ sys_exit(int status)
 	current_process->code_retour = status;
 	__asm("mov r0, #7");
 	__asm("swi #0");
-	__asm("mov sp, %0" : : "r"(current_process->sp));
-	__asm("mov lr, %0" : : "r"(current_process->lr_user));
 	return status;
 }
 
@@ -52,40 +42,65 @@ do_sys_yieldto(void)
 {
 	struct pcb_s* dest;
 	dest = (struct pcb_s*) sp_sauv[1];
-	int i;
-	for(i=0 ; i<13 ; i++)
-	{
-		// on enregistre les registres courant
-		current_process->registres[i] = sp_sauv[i];
-		// puis on charge les registres du nouveau processus
-		sp_sauv[i] = dest->registres[i];
-	}
-	// on enregistre le CPSR de l'ancien processus
-	__asm("mrs %0, SPSR" : "=r"(current_process->cpsr));
-	// puis on restaure le CPSR du nouveau processus
-	__asm("msr SPSR, %0" : : "r"(dest->cpsr));
-	// permutation des processus
-	current_process = dest;
-}
 
-void
-do_sys_yield(void)
-{
-	struct pcb_s* old_process = current_process;
-	// permutation des processus
-	elect();
-	int i;
-	for(i=0 ; i<13 ; i++)
+	// sauvegarde
+	__asm("cps 0x1F"); // Mode système
+	__asm("mov %0, lr" : "=r"(current_process->lr_user));
+	__asm("mov %0, sp" : "=r"(current_process->sp));
+	__asm("cps 0x13"); // Retour au mode SVC
+	__asm("mrs %0, spsr" : "=r"(current_process->cpsr));
+	int i=0;
+	for (; i < 13 ; i++)
 	{
-		// on enregistre les registres courants
-		old_process->registres[i] = sp_sauv[i];
-		// puis on charge les registres du nouveau processus
+		current_process->registres[i] = sp_sauv[i];
+	}
+	current_process->lr_svc = (func_t*)sp_sauv[13];
+	
+	// permutation de proccess
+	current_process = dest;
+		
+	// restauration
+	__asm("cps 0x1F"); // Mode système
+	__asm("mov lr, %0" : : "r"(current_process->lr_user)); 
+	__asm("mov sp, %0" : : "r"(current_process->sp));  
+	__asm("cps 0x13"); // Retour au mode SVC
+	__asm("msr spsr, %0" : : "r"(current_process->cpsr));
+	for (i = 0; i < 13 ; i++)
+	{
 		sp_sauv[i] = current_process->registres[i];
 	}
-	// on enregistre le CPSR et lr_svc de l'ancien processus
-	__asm("mrs %0, SPSR" : "=r"(old_process->cpsr));
-	// puis on restaure le CPSR du nouveau processus
-	__asm("msr SPSR, %0" : : "r"(current_process->cpsr));
+	sp_sauv[13] = (unsigned int)current_process->lr_svc;
+}
+
+void do_sys_yield() 
+{
+	// sauvegarde
+	__asm("cps 0x1F"); // Mode système
+	__asm("mov %0, lr" : "=r"(current_process->lr_user));
+	__asm("mov %0, sp" : "=r"(current_process->sp));
+	__asm("cps 0x13"); // Retour au mode SVC
+	__asm("mrs %0, spsr" : "=r"(current_process->cpsr));
+	int i=0;
+	for (; i < 13 ; i++)
+	{
+		current_process->registres[i] = sp_sauv[i];
+	}
+	current_process->lr_svc = (func_t*)sp_sauv[13];
+	
+	// permutation de proccess
+	elect();
+		
+	// restauration
+	__asm("cps 0x1F"); // Mode système
+	__asm("mov lr, %0" : : "r"(current_process->lr_user)); 
+	__asm("mov sp, %0" : : "r"(current_process->sp));  
+	__asm("cps 0x13"); // Retour au mode SVC
+	__asm("msr spsr, %0" : : "r"(current_process->cpsr));
+	for (i = 0; i < 13 ; i++)
+	{
+		sp_sauv[i] = current_process->registres[i];
+	}
+	sp_sauv[13] = (unsigned int)current_process->lr_svc;
 }
 
 
@@ -97,6 +112,7 @@ do_sys_exit()
 	current_process->next->previous = current_process->previous;
 	struct pcb_s* to_delete = current_process;
 	elect();
+	// int code_retour = to_delete->code_retour;
 	kFree((void *)to_delete->sp, SIZE_OF_PROCESS_STACK_OCTETS);
 	kFree((void *)to_delete, sizeof(struct pcb_s));
 	// ici tout est propre mais il faut encore que l'on change de contexte
@@ -107,8 +123,19 @@ do_sys_exit()
 		// puis on charge les registres du nouveau processus
 		sp_sauv[i] = current_process->registres[i];
 	}
-	// puis on restaure le CPSR du nouveau processus
+	// on restaure le CPSR du nouveau processus
 	__asm("msr SPSR, %0" : : "r"(current_process->cpsr));
+	// on restaure le CPSR du nouveau processus
+	sp_sauv[13] = (unsigned int)current_process->lr_svc;
+
+
+	__asm("cps 0x1F"); // Mode système => lr et sp sont ceux du user
+	// restauration
+	__asm("mov sp, %0" : : "r"(current_process->sp));
+	__asm("mov lr, %0" : : "r"(current_process->lr_user));
+	__asm("cps 0x13"); // Retour au mode SVC
+	//__asm("push {%0}": : "r"(code_retour));
+
 }
 
 /* Autre */
@@ -138,25 +165,29 @@ create_process(func_t* entry)
 
 	// pcb_res->lr_user = entry;
 	pcb_res->lr_user = (func_t*)(&start_current_process);
+	pcb_res->lr_svc = (func_t*)(&start_current_process);
 	pcb_res->fonction_process = entry;
-	pcb_res->sp = (uint32_t*) (kAlloc(SIZE_OF_PROCESS_STACK_OCTETS) + sizeof(uint8_t)*SIZE_OF_PROCESS_STACK_OCTETS);
-	pcb_res->code_retour = -1;
+	pcb_res->sp = (uint32_t*) (kAlloc(SIZE_OF_PROCESS_STACK_OCTETS) + SIZE_OF_PROCESS_STACK_OCTETS);
+	pcb_res->code_retour = -1; 
 	pcb_res->etat = READY;
-	pcb_res->cpsr = 0b101010000;
+	pcb_res->cpsr = 0x150; // user
 }
 
 void
 elect(void)
 {
-	// si le processus courant tournait, alors on l'arrete
-	current_process->etat = (current_process->etat==RUNNING) ? READY : current_process->etat;
-	if(current_process == current_process->next)
+	if(current_process->next->etat == RUNNING)
 	{
 		// il n'y a plus de processus à executer : on termine le kernel
 		terminate_kernel();
 	}
 	else
 	{
+		// si le processus courant tournait, alors on l'arrete
+		if(current_process->etat == RUNNING)
+		{
+			current_process->etat = READY;
+		}
 		current_process = current_process->next;
 		current_process->etat = RUNNING;
 	}

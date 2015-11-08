@@ -31,7 +31,7 @@ void kmain( void )
 	int i;
 	for(i=0;i<NB_PROCESS;i++)
 	{
-		create_process((func_t*) &user_process_stopping);
+		create_process((func_t*) &user_process);
 	}
 
 	__asm("cps 0x10"); // switch CPU to USER mode

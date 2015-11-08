@@ -1,9 +1,51 @@
 #include "syscall.h"
 #include "sched.h"
 #include "util.h"
+#include "asm_tools.h"
 #include "hw.h"
 
 unsigned int* sp_sauv = 0;
+
+void __attribute__((naked))
+irq_handler(void)
+{
+	__asm("stmfd sp!, {r0-r12, lr}");
+	__asm("mov %0, sp" : "=r"(sp_sauv));
+
+	// PC -= 4
+	sp_sauv[13] -= 4;
+
+	set_next_tick_default();
+	ENABLE_TIMER_IRQ();
+	ENABLE_IRQ();
+
+	do_sys_yield();
+
+	// ^ = on restaure aussi le spsr dans le cpsr
+	__asm("ldmfd sp!, {r0-r12, pc}^");
+}
+
+void __attribute__((naked))
+swi_handler(void)
+{
+	__asm("stmfd sp!, {r0-r12, lr}");
+	
+	int vector = 0;
+	__asm("mov %0, r0" : "=r"(vector));
+	__asm("mov %0, sp" : "=r"(sp_sauv));
+	
+	switch(vector){
+		case 1: do_sys_reboot();  break;
+		case 2: do_sys_nop(); 	  break;
+		case 3: do_sys_settime(); break;
+		case 4:	do_sys_gettime(); break;
+		case 5:	do_sys_yieldto(); break;
+		case 6:	do_sys_yield();   break;
+		case 7:	do_sys_exit();    break;
+		default: PANIC();
+	}
+	__asm("ldmfd sp!, {r0-r12, pc}^");
+}
 
 void
 sys_reboot(void)
@@ -72,28 +114,6 @@ do_sys_gettime()
 {
 	uint64_t date_ms = get_date_ms();
 	set64(sp_sauv, 1, date_ms);
-}
-
-void __attribute__((naked))
-swi_handler(void)
-{
-	__asm("stmfd sp!, {r0-r12, lr}");
-	
-	int vector = 0;
-	__asm("mov %0, r0" : "=r"(vector));
-	__asm("mov %0, sp" : "=r"(sp_sauv));
-	
-	switch(vector){
-		case 1: do_sys_reboot();  break;
-		case 2: do_sys_nop(); 	  break;
-		case 3: do_sys_settime(); break;
-		case 4:	do_sys_gettime(); break;
-		case 5:	do_sys_yieldto(); break;
-		case 6:	do_sys_yield();   break;
-		case 7:	do_sys_exit();    break;
-		default: PANIC();
-	}
-	__asm("ldmfd sp!, {r0-r12, pc}^");
 }
 
 uint64_t get64(unsigned int* stack, unsigned int low, unsigned int high)

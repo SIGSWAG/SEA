@@ -14,6 +14,7 @@ void do_sys_settime(void);
 void do_sys_gettime(void);
 
 void swi_handler(void);
+void irq_handler(void);
 
 uint64_t get64(unsigned int* stack, unsigned int low, unsigned int high);
 void set64(unsigned int* stack, unsigned int registre, uint64_t value);
