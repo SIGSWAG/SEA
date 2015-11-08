@@ -19,9 +19,10 @@ irq_handler(void)
 	ENABLE_TIMER_IRQ();
 	ENABLE_IRQ();
 
+	__asm("cps 0x13");
 	do_sys_yield();
+	__asm("cps 0x12");
 
-	// ^ = on restaure aussi le spsr dans le cpsr
 	__asm("ldmfd sp!, {r0-r12, pc}^");
 }
 
