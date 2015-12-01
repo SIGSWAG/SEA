@@ -188,3 +188,11 @@ On a R13_irq (SP), R14_irq (LR), et SPSR_irq qui sont spécifiques au mode Inter
 
 Question 9-1
 Une page prend 4kB.
+
+Question 9-2
+nG S APX TEX AP CB 1 XN
+0  0 0   001 11 00 1 0
+AP 11 => r/w pour tous
+TEX 001 + CB 00 => mémoire partageable, pas de mise en cache
+
+
