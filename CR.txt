@@ -191,8 +191,16 @@ Une page prend 4kB.
 
 Question 9-2
 nG S APX TEX AP CB 1 XN
-0  0 0   001 11 00 1 0
+0  0 0   000 11 01 1 0
 AP 11 => r/w pour tous
-TEX 001 + CB 00 => mémoire partageable, pas de mise en cache
+TEX 000 + CB 01 => mémoire mappée
+
+Question 9-3
+nG S APX TEX AP CB 1 XN
+0  0 0   000 11 01 1 0
+AP 11 => r/w pour tous
+TEX 000 + CB 01 => mémoire mappée
+
+8ers bits : 0X20 (deviceFlag)
 
 
