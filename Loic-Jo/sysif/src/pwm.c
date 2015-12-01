@@ -2,20 +2,21 @@
 #include "hw.h"
 
 extern char _binary_tune_wav_start;
-
+ 
 static volatile unsigned* gpio = (void*)GPIO_BASE;
 static volatile unsigned* clk = (void*)CLOCK_BASE;
 static volatile unsigned* pwm = (void*)PWM_BASE;
 
 /* Decomment this in order to get sound */
-/* char* audio_data = &_binary_tune_wav_start; */
+char* audio_data = &_binary_tune_wav_start;
 
 static void pause(int t) {
     // Pause for about t ms
     int i;
     for (;t>0;t--) {
-	for (i=5000;i>0;i--) 
+	for (i=5000;i>0;i--){
 	    i++; i--;
+	}
     }
 }
 
@@ -76,7 +77,7 @@ audio_test()
 	if (!(status & BCM2835_FULL1))
 	{
 	    /* Decomment this in order to get sound */
-	    /* *(pwm+BCM2835_PWM_FIFO) = audio_data[i]; */
+	    *(pwm+BCM2835_PWM_FIFO) = audio_data[i];
 	    i++;
 	}
       
