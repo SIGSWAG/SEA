@@ -185,4 +185,3 @@ On peut faire recours à une liste doublement chaînée pour avoir accès à la 
 
 Question 7-4:
 On a R13_irq (SP), R14_irq (LR), et SPSR_irq qui sont spécifiques au mode Interrupt
-
