@@ -21,6 +21,7 @@ struct pcb_s {
 	uint32_t cpsr;
 	int status;
 	int returnCode;
+    int page_table;
 
 	func_t * entry;
 	struct pcb_s * next_pcb;

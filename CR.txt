@@ -203,4 +203,9 @@ TEX 000 + CB 01 => mémoire mappée
 
 8ers bits : 0X20 (deviceFlag)
 
+Question 9-4
+Il nous faut des adresses alignées sur une puissance de 2 parce que nos pages ont des tailles en puissances de 2.
+
+
+
 

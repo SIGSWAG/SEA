@@ -17,7 +17,12 @@ void sched_init()
 	kmain_process.status = PROCESS_RUNNING;
 	current_process = &kmain_process;
 
-	kheap_init();
+    kheap_init();
+    #if VMEM
+
+        vmem_init();
+    #endif
+
 }
 
 void create_process(func_t* entry) 

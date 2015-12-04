@@ -3,10 +3,13 @@
 
 #define PAGE_SIZE 4096 //4 kBytes
 #define FIRST_LVL_TT_COUNT 4096 //12 bits
-#define FIRST_LVL_TT_SIZE 16384 //4096*4 Bytes
+#define FIRST_LVL_TT_SIZE 16384 //4096*32/8 ---> 16384 Bytes
 #define SECON_LVL_TT_COUNT 256 //8 bits
-#define SECON_LVL_TT_SIZE 1024 // 256*4 Bytes
+#define SECON_LVL_TT_SIZE 1024 // 256*32/8 ---> 1024 Bytes
 
+#include <stdint.h>
+
+int init_kern_translation_table(void);
 
 #endif
 
