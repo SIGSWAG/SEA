@@ -207,5 +207,10 @@ Question 9-4
 Il nous faut des adresses alignées sur une puissance de 2 parce que nos pages ont des tailles en puissances de 2.
 
 
+Diff : 
+			nG S APX TEX AP CB 1 XN
+Periph :	0  0 0   000 11 01 1 0
+Mem :		0  0 0   001 11 00 1 0
+Thibault :	0  0 0   010 10 01 1 0
 
 
