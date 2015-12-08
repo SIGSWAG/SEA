@@ -1,14 +1,17 @@
 #include "pwm.h"
 #include "hw.h"
+#include "sched.h"
 
 extern char _binary_tune_wav_start;
 extern char _binary_tune_wav_end;
-extern char _binary_tune_wav_size;
- 
+
+
 static volatile unsigned* gpio = (void*)GPIO_BASE;
 static volatile unsigned* clk = (void*)CLOCK_BASE;
 static volatile unsigned* pwm = (void*)PWM_BASE;
 
+static unsigned long long increment = 1;
+static int volume = 1;
 /* Decomment this in order to get sound */
 char* audio_data = &_binary_tune_wav_start;
 
@@ -16,9 +19,9 @@ static void pause(int t) {
     // Pause for about t ms
     int i;
     for (;t>0;t--) {
-	for (i=5000;i>0;i--){
-	    i++; i--;
-	}
+        for (i=5000;i>0;i--){
+            i++; i--;
+        }
     }
 }
 
@@ -55,13 +58,13 @@ static void audio_init(void)
     *(pwm+BCM2835_PWM1_RANGE) = range;
 
     *(pwm+BCM2835_PWM_CONTROL) =
-	BCM2835_PWM1_USEFIFO | // Use FIFO and not PWM mode
-	//          BCM2835_PWM1_REPEATFF |
-	BCM2835_PWM1_ENABLE  | // enable channel 1
-	BCM2835_PWM0_USEFIFO | // use FIFO and not PWM mode
-	//          BCM2835_PWM0_REPEATFF |  */
-	1<<6                 | // clear FIFO
-	BCM2835_PWM0_ENABLE;   // enable channel 0
+    BCM2835_PWM1_USEFIFO | // Use FIFO and not PWM mode
+    //          BCM2835_PWM1_REPEATFF |
+    BCM2835_PWM1_ENABLE  | // enable channel 1
+    BCM2835_PWM0_USEFIFO | // use FIFO and not PWM mode
+    //          BCM2835_PWM0_REPEATFF |  */
+    1<<6                 | // clear FIFO
+    BCM2835_PWM0_ENABLE;   // enable channel 0
 
     pause(2);
 }
@@ -69,29 +72,58 @@ static void audio_init(void)
 void
 audio_test()
 {
-    int i=0;
+    unsigned long long i=0;
     long status;
+    audio_init();
     
+    unsigned long long size = &_binary_tune_wav_end - &_binary_tune_wav_start;
+
     for(;;)
     {
-		i=0;
-		audio_init();
-		while (&audio_data[i] < &_binary_tune_wav_end)
-		{
-			status =  *(pwm + BCM2835_PWM_STATUS);
-			if (!(status & BCM2835_FULL1))
-			{
-				/* Decomment this in order to get sound */
-				*(pwm+BCM2835_PWM_FIFO) = audio_data[i];
-				i+=2;
-			}
-			  
-			if ((status & ERRORMASK)) {
-				//                uart_print("error: ");
-				//                hexstring(status);
-				//                uart_print("\r\n");
-				*(pwm+BCM2835_PWM_STATUS) = ERRORMASK;
-			}
-		}
-	}
+        i=0;
+        led_blink();
+        // while (&audio_data[i] < &_binary_tune_wav_end)
+        while (i < size)
+        {
+            status =  *(pwm + BCM2835_PWM_STATUS);
+            if (!(status & BCM2835_FULL1))
+            {
+                /* Decomment this in order to get sound */
+                *(pwm+BCM2835_PWM_FIFO) = (char)(audio_data[(unsigned long long)i] * volume);
+                i+=increment;
+            }
+              
+            if ((status & ERRORMASK))
+            {
+                //                uart_print("error: ");
+                //                hexstring(status);
+                //                uart_print("\r\n");
+                *(pwm+BCM2835_PWM_STATUS) = ERRORMASK;
+            }
+        }
+    }
 }
+
+
+
+void
+audio_config()
+{
+    unsigned long long simul_pas_de_changement = 0;
+    while(1)
+    {
+        if(simul_pas_de_changement < 100 * 2) // 10ms * 100 * 2 = 2s
+        {
+            simul_pas_de_changement++;
+            sys_yield();
+        }
+        else
+        {
+            simul_pas_de_changement = 0;
+            increment = (increment)%2 +1;
+            volume = (volume)%2 + 1;
+            sys_yield();
+        }
+    }
+}
+

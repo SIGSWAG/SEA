@@ -12,29 +12,36 @@ play_music()
 }
 
 void
+config_music()
+{
+	audio_config();
+}
+
+void
 kmain(void)
 {
 	
 	hw_init();
+	/*
 	led_on();
 	int i =0;
 	for(i=0 ; i<999999 ; i++){}
 	led_off();
-	led_blink(); 
 	play_music();
-	/*
+	*/ 
 
 	sched_init();
 	
 	create_process((func_t*) &play_music);
-		
+	create_process((func_t*) &config_music);
+	
 	timer_init();
 	// Activation des interruptions
 	ENABLE_IRQ();
 	
 	__asm("cps 0x10"); // switch CPU to USER mode
-	
+
 	while(1) {
 		sys_yield();
-	}*/
+	}
 }

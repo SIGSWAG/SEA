@@ -2,5 +2,6 @@
 #define PWM_H
 
 void audio_test();
+void audio_config();
 
 #endif
