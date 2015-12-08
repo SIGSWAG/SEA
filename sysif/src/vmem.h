@@ -14,5 +14,6 @@
 int init_kern_translation_table(void);
 void vmem_init();
 uint32_t vmem_translate(uint32_t va, struct pcb_s* process);
+
 #endif
 

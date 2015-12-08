@@ -1,6 +1,7 @@
 ﻿#include "vmem.h"
 #include "kheap.h"
 #include "sched.h"
+#include "uart.h"
 
 void start_mmu_C()
 {
@@ -43,25 +44,30 @@ void configure_mmu_C(register unsigned int pt_addr)
 int init_kern_translation_table(void)
 {
 
+    /** On alloue la table des pages de niveau 1 alignée sur 4096**/
+    unsigned int * table1 = (unsigned int *) kAlloc_aligned(FIRST_LVL_TT_SIZE, 14);
 
-    unsigned int * table1 = (unsigned int *) kAlloc_aligned(FIRST_LVL_TT_SIZE, 12);//on alloue la table de niveau 1 alignée sur 4096
-
-    //champs de bits
+    /** champs de bits **/
     unsigned int TABLE_2_NORMAL_PERIPH = 0b000000110110;
-    unsigned int TABLE_2_NORMAL_MEM = 0b000010100110;
+    unsigned int TABLE_2_NORMAL_MEM = 0b000001110010;
     unsigned int TABLE_1_NORMAL = 0b0000000001;
 
     unsigned int TABLE_2_BITSET;
+
+    /** Pour chaque entrée de la table de niveau 1 **/
     for(unsigned int i=0; i<FIRST_LVL_TT_COUNT; i++){
 
 
-        if( !(i>=0x200 && i<=0x20F) && !(i<=__kernel_heap_end__) )
+        /** Faute si i n'est pas entre 200 et 20F ou entre 0 et la fin du kernel **/
+        if( !(i>=0x200 && i<=0x20F) && !(i<(((unsigned int)&__kernel_heap_end__)>>20)) )
         {
             table1[i]=0x0;
-            break;
+            continue;
         }
 
-        if(i>=0x200 && i<=0x20F)//peripherique mappe en memoire
+
+        /** peripherique mappe en memoire **/
+        if(i>=0x200 && i<=0x20F)
         {
             TABLE_2_BITSET = TABLE_2_NORMAL_PERIPH;
 
@@ -71,15 +77,21 @@ int init_kern_translation_table(void)
 
         }
 
-        unsigned int * table2 = (unsigned int *) kAlloc_aligned(SECON_LVL_TT_SIZE, 10);//on alloue une table table de niveau 2 alignée sur 1024
+        /** On alloue une table de niveau 2 alignée sur 1024 **/
+        unsigned int * table2 = (unsigned int *) kAlloc_aligned(SECON_LVL_TT_SIZE, 10);
 
+
+        /** Pour chaque entrée dans cette table **/
         for(unsigned int j=0; j<SECON_LVL_TT_COUNT; j++){
 
-            table2[j]= (i<<20) | (j<<12) | TABLE_2_BITSET;//concat i|j|champ de bits
+            /** concat i|j|champ de bits **/
+            table2[j]= (i<<20) | (j<<12) | TABLE_2_BITSET;
 
         }
 
-        table1[i] = (unsigned int)table2 | TABLE_1_NORMAL;//table2|champ de bits
+        /** On place l'adresse de la table de niveau 2 dans la table de niveau 1 **/
+         table1[i] = (unsigned int)table2| TABLE_1_NORMAL;//table2|champ de bits
+
 
     }
 

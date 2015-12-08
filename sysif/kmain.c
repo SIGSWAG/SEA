@@ -34,9 +34,14 @@ void user_process3()
 
 void
 kmain(void){
+
+    /** Exemple de sortie console **/
+    uart_init();
+    uart_send_str("hello");
+
 	sched_init();
-	
-	create_process((func_t*) &user_process1);
+
+    create_process((func_t*) &user_process1);
 	create_process((func_t*) &user_process2);
 	create_process((func_t*) &user_process3);
 		
@@ -46,8 +51,7 @@ kmain(void){
 	
 	__asm("cps 0x10"); // switch CPU to USER mode
 	
-       uart_init();
-       uart_send_int(1337);
+
 
 
        //uint32_t  tr = vmem_translate(0x8000, 0);
