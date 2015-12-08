@@ -14,13 +14,14 @@ void sched_init()
 {
 	// initialisation du process kmain
 	kmain_process.next_pcb = &kmain_process;
+	kmain_process.priority = 0;
 	kmain_process.status = PROCESS_RUNNING;
 	current_process = &kmain_process;
 
 	kheap_init();
 }
 
-void create_process(func_t* entry) 
+void create_process(func_t* entry, int priority) 
 {
 	// Allocation de la place pour la pcb 
 	struct pcb_s * pcb = (struct pcb_s *) kAlloc(sizeof(struct pcb_s));
@@ -29,6 +30,7 @@ void create_process(func_t* entry)
 	pcb->lr_svc = (uint32_t)&start_current_process;
 	pcb->lr_user = (uint32_t)&start_current_process;
 	pcb->entry = entry;
+	pcb->priority = priority;
 	pcb->cpsr = 0x150; //1010 10000 -> User mode + no interrupt
 	//__asm("mrs %0, cpsr" : "=r"(pcb->cpsr));
 	
@@ -54,16 +56,57 @@ void start_current_process()
 
 void elect() 
 {
-	// on kill tous les PROCESS_TERMINATED
-	while(current_process->next_pcb->status == PROCESS_TERMINATED){
+	// Principe de l'ordonnanceur à priorité fixe :
+	// On recherche le processus ayant la priorité la plus forte (en tuant les processus terminés au passage)
+	// Si celui-ci est le processus courant, on reste desssus
+	// Sinon, on bascule sur celui-ci
+	// Si plusieurs processus ont la priorité la plus forte, on change sur un autre processus ayant cette priorité
+	struct pcb_s * process = current_process;
+	struct pcb_s * elected_process = current_process;
+	while(process->next_pcb != current_process){
+		
+		if(process->next_pcb->status == PROCESS_TERMINATED){
+			// Si le processus est terminé, on le tue
+			
+			struct pcb_s * process_to_kill = process->next_pcb;
+			process->next_pcb = process->next_pcb->next_pcb; // Fermeture de la chaîne
+			// On considère (voir implentation de kAlloc/kFree) que la mémoire est organisée telle que la pcb et la stack sp sont contigus.
+			// De plus, pcb doit être situé en dessous de la stack. On libère alors la taille de la structure et de sa stack d'un seul coup.
+			kFree((void *)process_to_kill, sizeof(struct pcb_s) + SP_SIZE);
+			
+		}
+		
+		// TODO peut-être revoir la logique, c'est un peu magouilleux mais ça a l'air de marcher, à tester plus en profondeur
+		if(elected_process->status == PROCESS_TERMINATED || process->next_pcb->priority >= elected_process->priority) {
+			// Si le processus suivant a une priorité au moins aussi haute que la priorité la plus haute jusqu'alors trouvée, on élit ce processus
+			
+			elected_process = process->next_pcb;
+			
+		}
+		
+		// Continuation du parcours de la liste chaînée circulaire...
+		process = process->next_pcb;
+		
+	}
+	
+	// S'il ne reste qu'un processus, alors c'est kmain : le programme est terminé...
+	if(elected_process->next_pcb == elected_process){
+		terminate_kernel();
+	}
+	
+	// Mise à jour des status
+	if(current_process->status != PROCESS_TERMINATED){
+		current_process->status = PROCESS_WAITING;
+	}
+	current_process = elected_process;
+	current_process->status = PROCESS_RUNNING;
+		
+	/*while(current_process->next_pcb->status == PROCESS_TERMINATED){
 		struct pcb_s * process_to_kill = current_process->next_pcb;
 		// on referme la chaine
 		current_process->next_pcb = current_process->next_pcb->next_pcb;
 		
-		// kill next_process
-		// on considère (voir implentation de kalloc/kFree) que la mémoire est organisée telle que pcb et la stack sp sont contigus.
-		// de plus pcb doit être situé en dessous de la stack. On libère alors la taille de la structure et de sa stack d'un seul coup.
-		kFree((void *)process_to_kill, sizeof(struct pcb_s) + SP_SIZE);
+		
 
 		// S'il ne reste qu'un process dans la boucle (main)
 		if(current_process->next_pcb == current_process){
@@ -73,14 +116,14 @@ void elect()
 	if(current_process->status != PROCESS_TERMINATED){
 		current_process->status = PROCESS_WAITING;
 	}
-	current_process = current_process->next_pcb;
+	current_process = current_process->next_pcb;*/
 	/*
 	if(current_process->status == CREATED){
 		// First time the process run
 		// call start_current_process somehow
 	}
 	*/
-	current_process->status = PROCESS_RUNNING;
+	//current_process->status = PROCESS_RUNNING;
 	
 }
 

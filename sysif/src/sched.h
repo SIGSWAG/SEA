@@ -21,12 +21,14 @@ struct pcb_s {
 	uint32_t cpsr;
 	int status;
 	int returnCode;
+	
+	unsigned int priority;
 
 	func_t * entry;
 	struct pcb_s * next_pcb;
 };
 
-void create_process(func_t* entry);
+void create_process(func_t* entry, int priority);
 
 void start_current_process();
 
