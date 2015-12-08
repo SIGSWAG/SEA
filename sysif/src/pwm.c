@@ -112,7 +112,7 @@ audio_config()
     unsigned long long simul_pas_de_changement = 0;
     while(1)
     {
-        if(simul_pas_de_changement < 100 * 2) // 10ms * 100 * 2 = 2s
+        if(simul_pas_de_changement < /*100*/ 10 * 2) // 10ms * 100 * 2 = 2s
         {
             simul_pas_de_changement++;
             sys_yield();
@@ -120,7 +120,7 @@ audio_config()
         else
         {
             simul_pas_de_changement = 0;
-            increment = (increment)%2 +1;
+            increment = (increment) % 2 + 1;
             volume = (volume)%2 + 1;
             sys_yield();
         }
