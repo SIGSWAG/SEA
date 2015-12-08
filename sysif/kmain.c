@@ -3,6 +3,9 @@
 #include "sched.h"
 #include "hw.h"
 #include "asm_tools.h"
+#include "vmem.h"
+#include "uart.h"
+
 
 void user_process1()
 {
@@ -43,6 +46,14 @@ kmain(void){
 	
 	__asm("cps 0x10"); // switch CPU to USER mode
 	
+       uart_init();
+       uart_send_int(1337);
+
+
+       //uint32_t  tr = vmem_translate(0x8000, 0);
+
+
+
 	while(1) {
 		sys_yield();
 	}

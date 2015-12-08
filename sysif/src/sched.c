@@ -1,7 +1,7 @@
 #include "sched.h"
 #include "kheap.h"
 #include "hw.h"
-
+#include "vmem.h"
 #define SP_SIZE 10000
 
 struct pcb_s kmain_process;
@@ -19,7 +19,6 @@ void sched_init()
 
     kheap_init();
     #if VMEM
-
         vmem_init();
     #endif
 
