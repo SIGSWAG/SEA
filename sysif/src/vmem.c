@@ -3,6 +3,8 @@
 #include "sched.h"
 #include "uart.h"
 
+uint8_t * occupation_table;
+
 void start_mmu_C()
 {
      register unsigned int control;
@@ -99,6 +101,27 @@ int init_kern_translation_table(void)
 
     configure_mmu_C((unsigned int)table1);
     return 0;
+
+}
+
+void init_occupation_table(void)
+{
+    occupation_table = (uint8_t *) kAlloc(OCCUPATION_TABLE_SIZE);
+
+
+    int j=0
+    for(unsigned int i=0; i<0x20FFFFFF; i+=4096*8; j++)
+    {
+        if(i < 0x1000000 || i > 0x1FFFFFFF)
+        {
+            occupation_table[j]=1;
+        }else{
+            occupation_table[j]=0;
+        }
+
+    }
+
+
 
 }
 
