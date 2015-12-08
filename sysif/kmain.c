@@ -3,39 +3,30 @@
 #include "sched.h"
 #include "hw.h"
 #include "asm_tools.h"
-
-void user_process1()
-{
-	int v1 = 5;
-	while( 1 ) {
-		v1++;
-	}
-}
-
-void user_process2()
-{
-	int v2 = -12;
-	while( 1 ) {
-		v2 -= 2;
-	}
-}
-
-void user_process3()
-{
-	int v3 = 0;
-	while( 1 ) {
-		v3 += 5;
-	}
-}
-
+#include "pwm.h"
 
 void
-kmain(void){
+play_music()
+{
+	audio_test();
+}
+
+void
+kmain(void)
+{
+	
+	hw_init();
+	led_on();
+	int i =0;
+	for(i=0 ; i<999999 ; i++){}
+	led_off();
+	led_blink(); 
+	play_music();
+	/*
+
 	sched_init();
 	
-	create_process((func_t*) &user_process1);
-	create_process((func_t*) &user_process2);
-	create_process((func_t*) &user_process3);
+	create_process((func_t*) &play_music);
 		
 	timer_init();
 	// Activation des interruptions
@@ -45,5 +36,5 @@ kmain(void){
 	
 	while(1) {
 		sys_yield();
-	}
+	}*/
 }
