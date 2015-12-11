@@ -34,10 +34,10 @@ extern int uart_error;
 void uart_init(void);
 
 // Envoie un caractère
-void uart_send_char(const char c);
+// void uart_send_char(const char c);
 
 // Permet d'envoyer des chaine de caractère. Celle-ci doit se terminer
-//	par le caractère nul.
+//	par le caractère nul. "\0"
 void uart_send_str(const char *data);
 
 // Permet d'envoyer un entier signé
