@@ -25,5 +25,7 @@ uint32_t vmem_translate(uint32_t va, struct pcb_s* process);
 
 unsigned int * init_table_page();
 
+void invalidate_TLB();
+
 #endif
 

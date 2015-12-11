@@ -17,10 +17,16 @@ void start_mmu_C()
     control = (1 << 23) | (1 << 15) | (1 << 4) | 1;
     
     // Invalidate the translation lookaside buffer (TLB)
-    __asm volatile("mcr p15, 0, %[data], c8, c7, 0" :: [data]"r"(0));
+    invalidate_TLB();
     
     // Write control register
     __asm volatile("mcr p15, 0, %[control], c1, c0, 0" :: [control]"r" (control));
+}
+
+void invalidate_TLB() 
+{
+	__asm("mcr p15, 0, r0, c8, c7, 0"); // Invalidate TLB entries
+	__asm volatile("mcr p15, 0, %[data], c8, c7, 0" :: [data]"r"(0));
 }
 
 void configure_mmu_C(register unsigned int pt_addr)
