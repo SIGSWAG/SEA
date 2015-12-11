@@ -2,7 +2,6 @@
 #define SCHED_H
 
 #include <stdint.h>
-
 // Process status
 #define PROCESS_TERMINATED 0
 #define PROCESS_RUNNING 1
@@ -13,6 +12,14 @@ typedef int (func_t) (void);
 
 struct pcb_s * current_process;
 
+struct block {
+
+    int block_size;
+    int* first_page;
+    struct block* next;
+
+
+};
 struct pcb_s {
 	uint32_t regs[13];
 	uint32_t sp;
@@ -21,11 +28,13 @@ struct pcb_s {
 	uint32_t cpsr;
 	int status;
 	int returnCode;
-        int page_table;
-
+    int* page_table;
 	func_t * entry;
 	struct pcb_s * next_pcb;
+    struct block* first_empty_block;
 };
+
+
 
 void create_process(func_t* entry);
 

@@ -28,11 +28,20 @@ void create_process(func_t* entry)
 {
 	// Allocation de la place pour la pcb 
 	struct pcb_s * pcb = (struct pcb_s *) kAlloc(sizeof(struct pcb_s));
-	
+
+
+    // Allocation et initialisation du premier bloc (pour l'instant, rien n'est alloué par le processus)
+    struct block * block = (struct block *) kAlloc(sizeof(struct block));
+    block->block_size = 1044480;//2^32 / 4096 - 4096 (taille totale adressable - taille kernel space)
+    block->first_page = (int*) 0x1000001; //début de la RAM user
+    block->next = 0; //un seul bloc disponible
+
+
 	// Mise en place du lr_svc, lr_user, et du cpsr
 	pcb->lr_svc = (uint32_t)&start_current_process;
 	pcb->lr_user = (uint32_t)&start_current_process;
 	pcb->entry = entry;
+    pcb->first_empty_block = block;
 	pcb->cpsr = 0x150; //1010 10000 -> User mode + no interrupt
 	//__asm("mrs %0, cpsr" : "=r"(pcb->cpsr));
 	
