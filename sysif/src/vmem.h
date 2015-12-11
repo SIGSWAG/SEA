@@ -28,5 +28,9 @@ unsigned int * init_table_page();
 
 void invalidate_TLB();
 
+void configure_mmu_kernel();
+
+void configure_mmu_C(register unsigned int pt_addr);
+
 #endif
 

@@ -108,6 +108,11 @@ void sys_yield()
 
 void do_sys_yield(uint32_t * sp_param_base) 
 {
+	// On configure la MMU avec la table des pages système
+	invalidate_TLB();
+	configure_mmu_kernel();
+	
+	
 	// save lr_user and sp_user
 	__asm("cps #31"); // Mode système
 	__asm("mov %0, lr" : "=r"(current_process->lr_user)); 
@@ -145,6 +150,10 @@ void do_sys_yield(uint32_t * sp_param_base)
 	}
 	// Restitution du LR_SVC
 	*(sp_param_base + 13) = current_process->lr_svc;
+	
+	// On reconfigure la MMU avec la table des pages du nouveau processus élu
+	invalidate_TLB();
+	configure_mmu_C((unsigned int)current_process->page_table);
 }
 
 int sys_exit(int status) 

@@ -10,6 +10,8 @@
 
 uint8_t * occupation_table;
 
+unsigned int * table_kernel;
+
 
 void start_mmu_C()
 {
@@ -17,13 +19,11 @@ void start_mmu_C()
 
     __asm("mcr p15, 0, %[zero], c1, c0, 0" :: [zero]"r"(0)); // Disable cache
     __asm("mcr p15, 0, r0, c7, c7, 0"); // Invalidate cache (data and instructions) 
-    __asm("mcr p15, 0, r0, c8, c7, 0"); // Invalidate TLB entries
+    
+    invalidate_TLB();
     
     // Enable ARMv6 MMU features (disable sub-page AP)
     control = (1 << 23) | (1 << 15) | (1 << 4) | 1;
-    
-    // Invalidate the translation lookaside buffer (TLB)
-    invalidate_TLB();
     
     // Write control register
     __asm volatile("mcr p15, 0, %[control], c1, c0, 0" :: [control]"r" (control));
@@ -32,7 +32,13 @@ void start_mmu_C()
 void invalidate_TLB() 
 {
 	__asm("mcr p15, 0, r0, c8, c7, 0"); // Invalidate TLB entries
+	
+	// Invalidate the translation lookaside buffer (TLB)
 	__asm volatile("mcr p15, 0, %[data], c8, c7, 0" :: [data]"r"(0));
+}
+
+void configure_mmu_kernel() {
+	configure_mmu_C((unsigned int)table_kernel);
 }
 
 void configure_mmu_C(register unsigned int pt_addr)
@@ -103,9 +109,10 @@ unsigned int * init_table_page()
 
 int init_kern_translation_table(void)
 {
-    unsigned int * table1 = init_table_page();
+    table_kernel = init_table_page();
 
-    configure_mmu_C((unsigned int)table1);
+    configure_mmu_C((unsigned int)table_kernel);
+    
     return 0;
 }
 
