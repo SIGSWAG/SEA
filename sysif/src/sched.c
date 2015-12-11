@@ -1,6 +1,7 @@
 #include "sched.h"
 #include "kheap.h"
 #include "hw.h"
+#include "pmh.h"
 
 #define SP_SIZE 10000
 
@@ -9,6 +10,8 @@ struct pcb_s kmain_process;
 uint32_t lr_user;
 uint32_t sp_user;
 
+process_max_heap pmh;
+
 void sched_init()
 {
 	// initialisation du process kmain
@@ -16,6 +19,9 @@ void sched_init()
 	kmain_process.priority = 0;
 	kmain_process.status = PROCESS_RUNNING;
 	current_process = &kmain_process;
+	
+	// Mise en place du tas-max
+	max_heap_init(&pmh, &kmain_process);
 
 	kheap_init();
 }
@@ -44,6 +50,9 @@ void create_process(func_t* entry, int priority)
 	current_process->next_pcb = pcb;
 	pcb->next_pcb = temp_pcb;
 	
+	// On ajoute le processus au tas-max
+	max_heap_add(&pmh, pcb);
+	
 	return;
 }
 
@@ -53,7 +62,28 @@ void start_current_process()
 	sys_exit(0);
 }
 
-void elect() 
+void elect()
+{
+	if(current_process->status == PROCESS_TERMINATED){
+		// Le processus en train de tourner est forcément le premier.
+		max_heap_remove(&pmh);
+		kFree((void *) current_process, sizeof(struct pcb_s) + SP_SIZE);
+		
+		// S'il ne reste qu'un processus, on a tout fini !
+		if(pmh.last_used_index == 1){
+			terminate_kernel();
+			return ;
+		}
+	} else {
+		current_process->status = PROCESS_WAITING;
+	}
+	
+	current_process = pmh.heap[1];
+	current_process->status = PROCESS_RUNNING;
+}
+
+// Actuellement inutilisé... implémentation naïve de recherche de priorité max par parcours des processus
+void elect_simple() 
 {
 	// Principe de l'ordonnanceur à priorité fixe :
 	// On recherche le processus ayant la priorité la plus forte (en tuant les processus terminés au passage)
@@ -228,4 +258,3 @@ void do_sys_yieldto(uint32_t * sp_param_base)
 	// On met le cpsr du current process dans spsr
 	__asm("msr spsr, %0" : : "r"(current_process->cpsr));
 }
-
