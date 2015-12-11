@@ -7,6 +7,20 @@
 static uint32_t * sp_param_base;
 static uint32_t lr_irq;
 
+// Data abort handler (faute traduction / faute d'accès)
+void data_handler() {
+	uint32_t dataFaultStatus;
+	uint32_t faultAddress;
+	
+	// Cause de la faute
+	__asm("MRC p15, 0, %0, c5, c0, 0" : "=r"(dataFaultStatus));
+	
+	// Adresse virtuelle qui a causé la faute
+	__asm("MRC p15, 0, %0, c6, c0, 0" : "=r"(faultAddress));
+	
+	
+}
+
 void __attribute__((naked)) irq_handler() {
 	__asm("mov %0, lr" : "=r"(lr_irq));
 	
