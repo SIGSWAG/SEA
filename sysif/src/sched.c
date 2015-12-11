@@ -9,7 +9,6 @@ struct pcb_s kmain_process;
 uint32_t lr_user;
 uint32_t sp_user;
 
-
 void sched_init()
 {
 	// initialisation du process kmain
@@ -100,30 +99,6 @@ void elect()
 	}
 	current_process = elected_process;
 	current_process->status = PROCESS_RUNNING;
-		
-	/*while(current_process->next_pcb->status == PROCESS_TERMINATED){
-		struct pcb_s * process_to_kill = current_process->next_pcb;
-		// on referme la chaine
-		current_process->next_pcb = current_process->next_pcb->next_pcb;
-		
-		
-
-		// S'il ne reste qu'un process dans la boucle (main)
-		if(current_process->next_pcb == current_process){
-			terminate_kernel();
-		}
-	}
-	if(current_process->status != PROCESS_TERMINATED){
-		current_process->status = PROCESS_WAITING;
-	}
-	current_process = current_process->next_pcb;*/
-	/*
-	if(current_process->status == CREATED){
-		// First time the process run
-		// call start_current_process somehow
-	}
-	*/
-	//current_process->status = PROCESS_RUNNING;
 	
 }
 
