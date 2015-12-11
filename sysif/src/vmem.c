@@ -3,7 +3,13 @@
 #include "sched.h"
 #include "uart.h"
 
+#define BEGIN_IO_MAPPED_MEM 0x20000000
+#define END_IO_MAPPED_MEM 0x20FFFFFF
+#define END_KERNEL_MEM 0x1000000
+
+
 uint8_t * occupation_table;
+
 
 void start_mmu_C()
 {
@@ -105,36 +111,44 @@ int init_kern_translation_table(void)
 
 void init_occupation_table(void)
 {
-	/*
-    occupation_table = (uint8_t *) kAlloc(OCCUPATION_TABLE_SIZE);
 
+    occupation_table = (uint8_t *) kAlloc(OCCUPATION_TABLE_SIZE); //TODO allouer une table avec 1 bit/frame == bool
 
-    int j=0
-    for(unsigned int i=0; i<0x20FFFFFF; i+=4096*8; j++)
-    {
-        if(i < 0x1000000 || i > 0x1FFFFFFF)
-        {
-            occupation_table[j]=1;
-        }else{
-            occupation_table[j]=0;
-        }
-
+    for(int i=0; i<OCCUPATION_TABLE_SIZE; i++){
+        occupation_table[i] = 0;
     }
 
- */
 
 }
 
 void vmem_init()
 {
 
-    //init mem phys
+    init_occupation_table();
     init_kern_translation_table();
     start_mmu_C();
-    //enable interruptions
-    //data aborts
 
 }
+
+
+
+void vmem_alloc_for_userland(struct pcb_s* process)
+{
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
 
 
 uint32_t vmem_translate(uint32_t va, struct pcb_s* process)
