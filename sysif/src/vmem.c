@@ -48,11 +48,9 @@ void configure_mmu_C(register unsigned int pt_addr)
 	__asm volatile("mcr p15, 0, %[r], c3, c0, 0" : : [r] "r" (0x3));
 }
 
-
-int init_kern_translation_table(void)
+unsigned int * init_table_page() 
 {
-
-    /** On alloue la table des pages de niveau 1 alignée sur 4096**/
+	/** On alloue la table des pages de niveau 1 alignée sur 16384 **/
     unsigned int * table1 = (unsigned int *) kAlloc_aligned(FIRST_LVL_TT_SIZE, 14);
 
     /** champs de bits **/
@@ -63,60 +61,57 @@ int init_kern_translation_table(void)
     unsigned int TABLE_2_BITSET;
 
     /** Pour chaque entrée de la table de niveau 1 **/
-    for(unsigned int i=0; i<FIRST_LVL_TT_COUNT; i++){
-
-
+    for(unsigned int i = 0; i < FIRST_LVL_TT_COUNT; i++) {
         /** Faute si i n'est pas entre 200 et 20F ou entre 0 et la fin du kernel **/
-        if( !(i>=0x200 && i<=0x20F) && !(i<(((unsigned int)&__kernel_heap_end__)>>20)) )
+        if( !(i >= 0x200 && i <= 0x20F) && !(i < (((unsigned int)&__kernel_heap_end__) >> 20)) )
         {
-            table1[i]=0x0;
+            table1[i] = 0x0;
             continue;
         }
-
 
         /** peripherique mappe en memoire **/
         if(i>=0x200 && i<=0x20F)
         {
             TABLE_2_BITSET = TABLE_2_NORMAL_PERIPH;
-
-        }else{
-
+        }
+        else
+        {
             TABLE_2_BITSET = TABLE_2_NORMAL_MEM;
-
         }
 
         /** On alloue une table de niveau 2 alignée sur 1024 **/
         unsigned int * table2 = (unsigned int *) kAlloc_aligned(SECON_LVL_TT_SIZE, 10);
 
-
         /** Pour chaque entrée dans cette table **/
-        for(unsigned int j=0; j<SECON_LVL_TT_COUNT; j++){
-
+        for(unsigned int j = 0; j < SECON_LVL_TT_COUNT; j++){
             /** concat i|j|champ de bits **/
-            table2[j]= (i<<20) | (j<<12) | TABLE_2_BITSET;
-
+            table2[j] = (i<<20) | (j<<12) | TABLE_2_BITSET;
         }
-
         /** On place l'adresse de la table de niveau 2 dans la table de niveau 1 **/
-         table1[i] = (unsigned int)table2| TABLE_1_NORMAL;//table2|champ de bits
-
-
+         table1[i] = (unsigned int)table2 | TABLE_1_NORMAL; //table2|champ de bits
     }
+    
+    return table1;
+}
 
 
+int init_kern_translation_table(void)
+{
+    unsigned int * table1 = init_table_page();
 
     configure_mmu_C((unsigned int)table1);
     return 0;
-
 }
 
 void init_occupation_table(void)
 {
+
     occupation_table = (uint8_t *) kAlloc(OCCUPATION_TABLE_SIZE); //TODO allouer une table avec 1 bit/frame == bool
 
     for(int i=0; i<OCCUPATION_TABLE_SIZE; i++){
         occupation_table[i] = 0;
     }
+
 
 }
 

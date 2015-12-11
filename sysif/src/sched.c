@@ -2,6 +2,7 @@
 #include "kheap.h"
 #include "hw.h"
 #include "vmem.h"
+
 #define SP_SIZE 10000
 
 struct pcb_s kmain_process;
@@ -55,6 +56,8 @@ void create_process(func_t* entry)
 	struct pcb_s * temp_pcb = current_process->next_pcb;
 	current_process->next_pcb = pcb;
 	pcb->next_pcb = temp_pcb;
+	
+	pcb->page_table = init_table_page();
 	
 	return;
 }
