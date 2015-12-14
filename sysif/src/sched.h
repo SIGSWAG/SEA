@@ -17,6 +17,7 @@ struct block {
     int block_size;
     int* first_page;
     struct block* next;
+    struct block* previous;
 
 
 };

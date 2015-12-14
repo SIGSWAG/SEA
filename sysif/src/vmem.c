@@ -221,7 +221,7 @@ void* vmem_alloc_for_userland(struct pcb_s* process)
         if(occupation_table[i] == 0){
 
             //la Frame est libre
-            address = 0x1000001 + i*PAGE_SIZE; // calcul de l'offset
+            address = END_KERNEL_MEM + i*PAGE_SIZE; // calcul de l'offset
             found = 1;
 
             int offsetFirstTable =((unsigned int)page)>>20; //12 premiers bits => offset dans la première table
@@ -250,8 +250,6 @@ void* vmem_alloc_for_userland(struct pcb_s* process)
 
                 table2 = (unsigned int*)((((unsigned int)table1[offsetFirstTable])>>10)<<10); //22 premiers bits, alignés sur 1024
 
-
-
             }
 
             table2[offsetSecondTable] = ((address>>12)<<12) | TABLE_2_NORMAL_MEM;//descripteur de niveau 2
@@ -261,9 +259,12 @@ void* vmem_alloc_for_userland(struct pcb_s* process)
 
             if(first_block->block_size == 0){ //le bloc est vide, on branche sur le suivant
                 current_process->first_empty_block = current_process->first_empty_block->next;
+                current_process->first_empty_block->previous = 0;
             }else{
                 first_block->first_page = first_block->first_page + PAGE_SIZE;
             }
+
+            occupation_table[i] = 1;
 
         }
         i++;
@@ -274,6 +275,120 @@ void* vmem_alloc_for_userland(struct pcb_s* process)
 }
 
 
+void vmem_desalloc_for_userland(struct pcb_s* process, void* page)
+{
+
+
+    //on modifie la table des pages
+    int offsetFirstTable =((unsigned int)page)>>20; //12 premiers bits => offset dans la première table
+    int offsetSecondTable = (((unsigned int)page)<<12)>>24 ; //10 bits suivants => offset dans la deuxième table;
+
+    unsigned int * table1 =  process->page_table;
+    unsigned int * table2;
+
+    table2 = (unsigned int*)((((unsigned int)table1[offsetFirstTable])>>10)<<10); //22 premiers bits, alignés sur 1024
+
+    unsigned int address = (table2[offsetSecondTable]>>12)<<12;
+    table2[offsetSecondTable] = 0x0; //libération de la page
+
+    int offset =  (address - END_KERNEL_MEM) % PAGE_SIZE;
+
+    occupation_table[offset]= 0;//libération de la frame physique
+
+    /** Libération de la page pour le processus **/
+
+    unsigned int currentPage ;
+    unsigned int pageToFree = (unsigned int) page;
+    struct block* currentBlock = process->first_empty_block;
+    struct block* precedingBlock;
+    if(currentBlock !=0 ){
+        currentPage = (unsigned int) currentBlock->first_page;
+
+    }else{
+        //Allocation du bloc
+        struct block * block = (struct block *) kAlloc(sizeof(struct block));
+        block->block_size = 1;
+        block->first_page = (int*) pageToFree;
+        block->next = 0;
+        block->previous =0;
+    }
+
+
+    while(currentPage < pageToFree && currentBlock != 0 ){
+
+        precedingBlock = currentBlock;
+        currentBlock = currentBlock->next;
+        if(currentBlock != 0){
+            currentPage = (unsigned int) currentBlock->first_page;
+        }
+
+
+    }
+
+    if(currentPage >= pageToFree && currentBlock != 0){ //on regarde le bloc d'avant
+
+
+        if(pageToFree + PAGE_SIZE == (unsigned int) currentBlock->first_page){ //insertion juste avant le bloc courant ?
+
+            currentBlock->first_page = (int*) pageToFree;
+            currentBlock->block_size++;
+
+        }else if(currentBlock->previous !=0){
+
+            unsigned int lastPage = (unsigned int) currentBlock->previous->first_page + currentBlock->previous->block_size * PAGE_SIZE;
+
+            if(lastPage == pageToFree - PAGE_SIZE){ //insertion après le bloc précédent
+                currentBlock->previous->block_size++;
+
+            }else{ //création d'un nouveau bloc
+                //Allocation du bloc
+                struct block * block = (struct block *) kAlloc(sizeof(struct block));
+                block->block_size = 1;
+                block->first_page = (int*) pageToFree;
+                block->next = currentBlock;
+                block->previous = currentBlock->previous;
+                currentBlock->previous->next = block;
+                currentBlock->previous = block;
+
+            }
+
+
+        }else{ //allocation d'un bloc en bout de liste
+            //Allocation du bloc
+            struct block * block = (struct block *) kAlloc(sizeof(struct block));
+            block->block_size = 1;
+            block->first_page = (int*) pageToFree;
+            block->next = currentBlock; //un seul bloc disponible
+            block->previous = 0;
+            currentBlock->previous = block;
+
+        }
+    }else{//on était au dernier block
+
+        unsigned int lastPage = (unsigned int) precedingBlock->first_page + currentBlock->previous->block_size * PAGE_SIZE;
+
+        if(lastPage == pageToFree - PAGE_SIZE){ //insertion après le bloc précédent
+            precedingBlock->block_size++;
+
+        }else{
+            //Allocation du bloc
+            struct block * block = (struct block *) kAlloc(sizeof(struct block));
+            block->block_size = 1;
+            block->first_page = (int*) pageToFree;
+            block->next = 0;
+            block->previous = precedingBlock;
+            precedingBlock->next = block;
+
+
+        }
+
+
+
+    }
+
+
+
+}
 
 
 

@@ -42,8 +42,9 @@ void create_process(func_t* entry)
     // Allocation et initialisation du premier bloc (pour l'instant, rien n'est alloué par le processus)
     struct block * block = (struct block *) kAlloc(sizeof(struct block));
     block->block_size = 1044480;//2^32 / 4096 - 4096 (taille totale adressable - taille kernel space)
-    block->first_page = (int*) 0x1000001; //début de la RAM user
+    block->first_page = (int*) 0x1000000; //début de la RAM user
     block->next = 0; //un seul bloc disponible
+    block->previous = 0;
 
 
     // Mise en place du lr_svc, lr_user, et du cpsr

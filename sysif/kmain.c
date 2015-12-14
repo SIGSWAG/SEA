@@ -19,6 +19,7 @@ void user_process1()
 
 void user_process2()
 {
+
     int v2 = -12;
     while( 1 ) {
         v2 -= 2;
@@ -27,6 +28,8 @@ void user_process2()
 
 void user_process3()
 {
+    int* alloc = (int*) sys_mmap();
+    alloc[0] = 12345;
     int v3 = 0;
     while( 1 ) {
         v3 += 5;
