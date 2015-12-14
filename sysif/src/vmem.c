@@ -2,23 +2,40 @@
 #include "kheap.h"
 #include "sched.h"
 #include "uart.h"
+#include "syscall.h"
 
 #define BEGIN_IO_MAPPED_MEM 0x20000000
 #define END_IO_MAPPED_MEM 0x20FFFFFF
 #define END_KERNEL_MEM 0x1000000
-
+/** champs de bits **/
+#define TABLE_2_NORMAL_PERIPH  0b000000110110
+#define TABLE_2_NORMAL_MEM  0b000001110010
+#define TABLE_1_NORMAL  0b0000000001
 
 uint8_t * occupation_table;
 
 unsigned int * table_kernel;
 
 
+
+void __attribute__((naked)) data_handler(){
+
+
+    uart_send_str("Memory fault");
+    //we stop the execution of the kernel
+    sys_reboot();
+}
+
+
+
+
+
 void start_mmu_C()
 {
-     register unsigned int control;
+    register unsigned int control;
 
     __asm("mcr p15, 0, %[zero], c1, c0, 0" :: [zero]"r"(0)); // Disable cache
-    __asm("mcr p15, 0, r0, c7, c7, 0"); // Invalidate cache (data and instructions) 
+    __asm("mcr p15, 0, r0, c7, c7, 0"); // Invalidate cache (data and instructions)
     
     invalidate_TLB();
     
@@ -31,44 +48,39 @@ void start_mmu_C()
 
 void invalidate_TLB() 
 {
-	__asm("mcr p15, 0, r0, c8, c7, 0"); // Invalidate TLB entries
-	
-	// Invalidate the translation lookaside buffer (TLB)
-	__asm volatile("mcr p15, 0, %[data], c8, c7, 0" :: [data]"r"(0));
+    __asm("mcr p15, 0, r0, c8, c6, 0"); // Invalidate TLB entries
+
+    // Invalidate the translation lookaside buffer (TLB)
+    //__asm volatile("mcr p15, 0, %[data], c8, c7, 0" :: [data]"r"(0));
 }
 
 void configure_mmu_kernel() {
-	configure_mmu_C((unsigned int)table_kernel);
+    configure_mmu_C((unsigned int)table_kernel);
 }
 
 void configure_mmu_C(register unsigned int pt_addr)
 {
     //total++; ?????
-	
-	// Translation table 0
-	__asm volatile("mcr p15, 0, %[addr], c2, c0, 0" : : [addr] "r" (pt_addr));
-	
-	// Translation table 1
-	__asm volatile("mcr p15, 0, %[addr], c2, c0, 1" : : [addr] "r" (pt_addr));
-	
-	// Use translation table 0 for everything
-	__asm volatile("mcr p15, 0, %[n], c2, c0, 2" : : [n] "r" (0));
-	
-	/* Set Domain 0 ACL to "Manager", not enforcing memory permissions
-	 * Evert mapped section/page is in domain 0
-	 */
-	__asm volatile("mcr p15, 0, %[r], c3, c0, 0" : : [r] "r" (0x3));
+
+    // Translation table 0
+    __asm volatile("mcr p15, 0, %[addr], c2, c0, 0" : : [addr] "r" (pt_addr));
+
+    // Translation table 1
+    __asm volatile("mcr p15, 0, %[addr], c2, c0, 1" : : [addr] "r" (pt_addr));
+
+    // Use translation table 0 for everything
+    __asm volatile("mcr p15, 0, %[n], c2, c0, 2" : : [n] "r" (0));
+
+    /* Set Domain 0 ACL to "Manager", not enforcing memory permissions
+         * Evert mapped section/page is in domain 0
+         */
+    __asm volatile("mcr p15, 0, %[r], c3, c0, 0" : : [r] "r" (0x3));
 }
 
-unsigned int * init_table_page() 
+unsigned int * init_kernel_table_page()
 {
-	/** On alloue la table des pages de niveau 1 alignée sur 16384 **/
+    /** On alloue la table des pages de niveau 1 alignée sur 16384 **/
     unsigned int * table1 = (unsigned int *) kAlloc_aligned(FIRST_LVL_TT_SIZE, 14);
-
-    /** champs de bits **/
-    unsigned int TABLE_2_NORMAL_PERIPH = 0b000000110110;
-    unsigned int TABLE_2_NORMAL_MEM = 0b000001110010;
-    unsigned int TABLE_1_NORMAL = 0b0000000001;
 
     unsigned int TABLE_2_BITSET;
 
@@ -84,6 +96,7 @@ unsigned int * init_table_page()
         /** peripherique mappe en memoire **/
         if(i>=0x200 && i<=0x20F)
         {
+
             TABLE_2_BITSET = TABLE_2_NORMAL_PERIPH;
         }
         else
@@ -100,16 +113,64 @@ unsigned int * init_table_page()
             table2[j] = (i<<20) | (j<<12) | TABLE_2_BITSET;
         }
         /** On place l'adresse de la table de niveau 2 dans la table de niveau 1 **/
-         table1[i] = (unsigned int)table2 | TABLE_1_NORMAL; //table2|champ de bits
+        table1[i] = (unsigned int)table2 | TABLE_1_NORMAL; //table2|champ de bits
     }
     
     return table1;
 }
 
+unsigned int * init_table_page()
+{
+
+    /** On alloue la table des pages de niveau 1 alignée sur 16384 **/
+    unsigned int * table1 = (unsigned int *) kAlloc_aligned(FIRST_LVL_TT_SIZE, 14);
+
+    unsigned int TABLE_2_BITSET;
+
+
+
+    /** Pour chaque entrée de la table de niveau 1 **/
+    for(unsigned int i = 0; i < FIRST_LVL_TT_COUNT; i++) {
+        /** Faute si i n'est pas entre 200 et 20F ou entre 0 et la fin du kernel **/
+        if(!(i < (((unsigned int)&__kernel_heap_end__) >> 20)) )
+        {
+            table1[i] = 0x0;
+            continue;
+        }else if(i < (((unsigned int)&__kernel_heap_end__) >> 20))//on redirige vers les tables du noyau
+        {
+            table1[i] = table_kernel[i];
+            continue;
+        }
+
+        TABLE_2_BITSET = TABLE_2_NORMAL_MEM;
+
+
+        /** On alloue une table de niveau 2 alignée sur 1024 **/
+        unsigned int * table2 = (unsigned int *) kAlloc_aligned(SECON_LVL_TT_SIZE, 10);
+
+        /** Pour chaque entrée dans cette table **/
+        for(unsigned int j = 0; j < SECON_LVL_TT_COUNT; j++){
+            /** concat i|j|champ de bits **/
+            table2[j] = (i<<20) | (j<<12) | TABLE_2_BITSET;
+        }
+        /** On place l'adresse de la table de niveau 2 dans la table de niveau 1 **/
+        table1[i] = (unsigned int)table2 | TABLE_1_NORMAL; //table2|champ de bits
+    }
+
+    return table1;;
+
+}
+
+
+
+
+
+
+
 
 int init_kern_translation_table(void)
 {
-    table_kernel = init_table_page();
+    table_kernel = init_kernel_table_page();
 
     configure_mmu_C((unsigned int)table_kernel);
     
@@ -139,16 +200,78 @@ void vmem_init()
 
 
 
-void vmem_alloc_for_userland(struct pcb_s* process)
+void* vmem_alloc_for_userland(struct pcb_s* process)
 {
 
+    //On recherche une Page libre :
+    struct block * first_block = process->first_empty_block;
+    int* page = first_block->first_page; //adresse de la première page
+    unsigned int * table1 = current_process->page_table;
 
 
 
+    //On cherche une Frame libre;
+    int found = 0;
+    int i = 0;
+    int address  = 0;
+
+    while(found == 0 && i < OCCUPATION_TABLE_SIZE)
+    {
+
+        if(occupation_table[i] == 0){
+
+            //la Frame est libre
+            address = 0x1000001 + i*PAGE_SIZE; // calcul de l'offset
+            found = 1;
+
+            int offsetFirstTable =((unsigned int)page)>>20; //12 premiers bits => offset dans la première table
+            int offsetSecondTable = (((unsigned int)page)<<12)>>24 ; //10 bits suivants => offset dans la deuxième table;
+
+
+            unsigned int * table2;
+
+
+            if(table1[offsetFirstTable] == 0x0){//pas de table de niveau 2, il faut allouer
+
+                /** On alloue une table de niveau 2 alignée sur 1024 **/
+                table2 = (unsigned int *) kAlloc_aligned(SECON_LVL_TT_SIZE, 10);
+
+                /** Pour chaque entrée dans cette table **/
+                for(unsigned int j = 0; j < SECON_LVL_TT_COUNT; j++){
+
+                    table2[j]=0x0;
+
+                }
+                /** On place l'adresse de la table de niveau 2 dans la table de niveau 1 **/
+                table1[offsetFirstTable] = (unsigned int)table2 | TABLE_1_NORMAL; //table2|champ de bits
+
+
+            }else{
+
+                table2 = (unsigned int*)((((unsigned int)table1[offsetFirstTable])>>10)<<10); //22 premiers bits, alignés sur 1024
+
+
+
+            }
+
+            table2[offsetSecondTable] = ((address>>12)<<12) | TABLE_2_NORMAL_MEM;//descripteur de niveau 2
+
+
+            first_block->block_size--;//une page de moins dans le bloc
+
+            if(first_block->block_size == 0){ //le bloc est vide, on branche sur le suivant
+                current_process->first_empty_block = current_process->first_empty_block->next;
+            }else{
+                first_block->first_page = first_block->first_page + PAGE_SIZE;
+            }
+
+        }
+        i++;
+    }
+
+    return page;
 
 }
-
-
 
 
 
@@ -182,7 +305,7 @@ uint32_t vmem_translate(uint32_t va, struct pcb_s* process)
         __asm("mrc p15, 0, %[tb], c2, c0, 0":[tb]"=r"(table_base));
     } else
     {
-       table_base = (uint32_t) process-> page_table;
+        table_base = (uint32_t) process-> page_table;
     }
 
     table_base = table_base & 0xFFFFC000;

@@ -23,4 +23,7 @@ void do_sys_gettime();
 
 void irq_handler();
 
+void* sys_mmap();
+
+void do_sys_mmap();
 #endif

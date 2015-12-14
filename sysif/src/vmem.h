@@ -9,6 +9,9 @@
 #define SECON_LVL_TT_SIZE 1024 // 256*32/8 ---> 1024 Bytes
 #define OCCUPATION_TABLE_SIZE 65536 // 0x10000 (2¹⁶) * 8/8 ---> 65536 Bytes
 
+#define PROCESS_TABLE_INIT 0
+#define KERNEL_TABLE_INIT 1
+
 /**
   Adressage physique dans la RAM : 0x2000 0000 - 0x1000 0000 (2²⁹ - 2²⁸ = 2²⁸) = 268435456
   Adressage logique : 0x1 0000 0000 (2³²)
@@ -31,6 +34,9 @@ void invalidate_TLB();
 void configure_mmu_kernel();
 
 void configure_mmu_C(register unsigned int pt_addr);
+
+void* vmem_alloc_for_userland(struct pcb_s* process);
+
 
 #endif
 
