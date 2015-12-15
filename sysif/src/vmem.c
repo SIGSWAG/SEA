@@ -203,7 +203,7 @@ void vmem_init()
 void* vmem_alloc_for_userland(struct pcb_s* process)
 {
 
-    //On recherche une Page libre :
+    //On recherche une Page libre : TODO si plus de block libre ?
     struct block * first_block = process->first_empty_block;
     int* page = first_block->first_page; //adresse de la première page
     unsigned int * table1 = current_process->page_table;
@@ -257,14 +257,14 @@ void* vmem_alloc_for_userland(struct pcb_s* process)
 
             first_block->block_size--;//une page de moins dans le bloc
 
-            if(first_block->block_size == 0){ //le bloc est vide, on branche sur le suivant
+            if(first_block->block_size == 0){ //le bloc est vide, on branche sur le suivant TODO libération mémoire
                 current_process->first_empty_block = current_process->first_empty_block->next;
                 current_process->first_empty_block->previous = 0;
             }else{
-                first_block->first_page = first_block->first_page + PAGE_SIZE;
+                first_block->first_page = (int*) ((unsigned int)(first_block->first_page) + PAGE_SIZE);
             }
 
-            occupation_table[i] = 1;
+            occupation_table[i] = 1; //la frame est marquée occupée
 
         }
         i++;
@@ -293,7 +293,7 @@ void vmem_desalloc_for_userland(struct pcb_s* process, void* page)
 
     int offset =  (address - END_KERNEL_MEM) % PAGE_SIZE;
 
-    occupation_table[offset]= 0;//libération de la frame physique
+    occupation_table[offset] = 0;//libération de la frame physique
 
     /** Libération de la page pour le processus **/
 
@@ -301,16 +301,20 @@ void vmem_desalloc_for_userland(struct pcb_s* process, void* page)
     unsigned int pageToFree = (unsigned int) page;
     struct block* currentBlock = process->first_empty_block;
     struct block* precedingBlock;
+
+    /** 7 cas différents pour l'insertion de la page **/
+
     if(currentBlock !=0 ){
         currentPage = (unsigned int) currentBlock->first_page;
 
-    }else{
+    }else{//il n'y a pas de bloc CAS 1
         //Allocation du bloc
         struct block * block = (struct block *) kAlloc(sizeof(struct block));
         block->block_size = 1;
         block->first_page = (int*) pageToFree;
         block->next = 0;
-        block->previous =0;
+        block->previous = 0;
+        current_process->first_empty_block = block;
     }
 
 
@@ -325,22 +329,22 @@ void vmem_desalloc_for_userland(struct pcb_s* process, void* page)
 
     }
 
-    if(currentPage >= pageToFree && currentBlock != 0){ //on regarde le bloc d'avant
+    if(currentPage >= pageToFree && currentBlock != 0){ //on regarde le bloc courant
 
 
-        if(pageToFree + PAGE_SIZE == (unsigned int) currentBlock->first_page){ //insertion juste avant le bloc courant ?
+        if( (unsigned int)(pageToFree) + PAGE_SIZE == (unsigned int) currentBlock->first_page){ //insertion juste avant le bloc courant CAS 2
 
             currentBlock->first_page = (int*) pageToFree;
             currentBlock->block_size++;
 
-        }else if(currentBlock->previous !=0){
+        }else if(currentBlock->previous !=0){ //insertion au niveau du bloc précédent
 
-            unsigned int lastPage = (unsigned int) currentBlock->previous->first_page + currentBlock->previous->block_size * PAGE_SIZE;
+            unsigned int lastPage = (unsigned int) currentBlock->previous->first_page + currentBlock->previous->block_size * PAGE_SIZE; //dernière page du bloc
 
-            if(lastPage == pageToFree - PAGE_SIZE){ //insertion après le bloc précédent
+            if(lastPage == ((unsigned int)(pageToFree) - PAGE_SIZE)){ //insertion juste après le bloc précédent CAS 3
                 currentBlock->previous->block_size++;
 
-            }else{ //création d'un nouveau bloc
+            }else{ //création d'un nouveau bloc CAS 4
                 //Allocation du bloc
                 struct block * block = (struct block *) kAlloc(sizeof(struct block));
                 block->block_size = 1;
@@ -353,7 +357,7 @@ void vmem_desalloc_for_userland(struct pcb_s* process, void* page)
             }
 
 
-        }else{ //allocation d'un bloc en bout de liste
+        }else{ //allocation d'un bloc en début de liste CAS 5
             //Allocation du bloc
             struct block * block = (struct block *) kAlloc(sizeof(struct block));
             block->block_size = 1;
@@ -361,16 +365,17 @@ void vmem_desalloc_for_userland(struct pcb_s* process, void* page)
             block->next = currentBlock; //un seul bloc disponible
             block->previous = 0;
             currentBlock->previous = block;
+            current_process->first_empty_block = block;
 
         }
-    }else{//on était au dernier block
+    }else{//on était au dernier block, insertion après le dernier bloc
 
-        unsigned int lastPage = (unsigned int) precedingBlock->first_page + currentBlock->previous->block_size * PAGE_SIZE;
+        unsigned int lastPage = (unsigned int) precedingBlock->first_page + currentBlock->previous->block_size * PAGE_SIZE;//derniere page du dernier nloc
 
-        if(lastPage == pageToFree - PAGE_SIZE){ //insertion après le bloc précédent
+        if(lastPage ==  ((unsigned int)(pageToFree) - PAGE_SIZE)){ //insertion après le bloc précédent CAS 6
             precedingBlock->block_size++;
 
-        }else{
+        }else{ //nouveau bloc en fin de liste CAS 7
             //Allocation du bloc
             struct block * block = (struct block *) kAlloc(sizeof(struct block));
             block->block_size = 1;

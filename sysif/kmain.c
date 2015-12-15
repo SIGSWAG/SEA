@@ -11,7 +11,12 @@ void user_process1()
 {
     int v1 = 5;
     int* alloc = (int*) sys_mmap();
+    int* alloc2 = (int*) sys_mmap();
     alloc[0] = 1337;
+    alloc2[0] = 7890;
+    sys_munmap((void*)alloc);
+    sys_munmap((void*)alloc2);
+    alloc2 = (int*) sys_mmap();
     while( 1 ) {
         v1++;
     }

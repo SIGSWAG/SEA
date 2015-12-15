@@ -25,5 +25,9 @@ void irq_handler();
 
 void* sys_mmap();
 
-void do_sys_mmap();
+void do_sys_mmap(uint32_t * sp_param);
+
+void sys_munmap(void* pointer);
+
+void do_sys_munmap(uint32_t * sp_param);
 #endif
