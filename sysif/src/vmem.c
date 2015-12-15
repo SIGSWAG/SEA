@@ -7,27 +7,62 @@
 #define BEGIN_IO_MAPPED_MEM 0x20000000
 #define END_IO_MAPPED_MEM 0x20FFFFFF
 #define END_KERNEL_MEM 0x1000000
+
 /** champs de bits **/
 #define TABLE_2_NORMAL_PERIPH  0b000000110110
 #define TABLE_2_NORMAL_MEM  0b000001110010
 #define TABLE_1_NORMAL  0b0000000001
 
+/** Fautes d'accès aux données **/
+// Descripteur de niveau 2 (deuxième table des pages) invalide (bits 00 dans l'entrée)
+#define TRANSLATION_FAULT_PAGE 0b0111
+#define ACCESS_FAULT 0b0110
+#define PERMISSION_FAULT 0b1111
+// Descripteur de niveau 1 (première table des pages) invalide (bits 00 dans l'entrée)
+#define TRANSLATION_FAULT_SECTION 0b0101
+
 uint8_t * occupation_table;
 
 unsigned int * table_kernel;
 
-
-
-void __attribute__((naked)) data_handler(){
-
-
-    uart_send_str("Memory fault");
-    //we stop the execution of the kernel
-    sys_reboot();
+// Data abort handler (faute traduction / faute d'accès)
+void data_handler(){
+    uint32_t dataFaultStatus;
+	uint32_t faultAddress;
+	uint32_t dfsr;
+	
+	// Cause de la faute
+	__asm volatile("MRC p15, 0, %0, c5, c0, 0" : "=r"(dfsr));
+	
+	// On récupère les bits [3:0] pour avoir la cause
+	dataFaultStatus = dfsr & 0xF;
+	
+	// Adresse virtuelle qui a causé la faute
+	__asm volatile("MRC p15, 0, %0, c6, c0, 0" : "=r"(faultAddress));
+	
+	//uart_init();
+	
+	if(dataFaultStatus == TRANSLATION_FAULT_PAGE) {
+		//uart_send_str("Data fault -- translation fault, page level");
+	}
+	else if(dataFaultStatus == ACCESS_FAULT) {
+		//uart_send_str("Data fault -- access fault");
+	}
+	else if(dataFaultStatus == PERMISSION_FAULT) {
+		//uart_send_str("Data fault -- permission fault");
+	}
+	else if(dataFaultStatus == TRANSLATION_FAULT_SECTION) {
+		//uart_send_str("Data fault -- translation fault, section level");
+	}
+	else {
+		//uart_send_str("Data fault -- Undefined data fault");
+	}
+	//uart_send_str("at address %d", faultAddress);
+	
+	// Stop current process
+	//uart_send_str("Stopping current process");
+    sys_exit(- dataFaultStatus);
 }
-
-
-
 
 
 void start_mmu_C()
