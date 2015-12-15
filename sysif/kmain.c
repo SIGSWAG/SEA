@@ -33,8 +33,13 @@ void user_process2()
 
 void user_process3()
 {
+	// Provoque un data abort
+	//int * pt = (int *) 0x1100001;
+	//*pt = 12;
+	
     int* alloc = (int*) sys_mmap();
     alloc[0] = 12345;
+    
     int v3 = 0;
     while( 1 ) {
         v3 += 5;
