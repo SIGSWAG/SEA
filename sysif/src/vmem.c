@@ -40,27 +40,29 @@ void data_handler(){
 	// Adresse virtuelle qui a causé la faute
 	__asm volatile("MRC p15, 0, %0, c6, c0, 0" : "=r"(faultAddress));
 	
-	//uart_init();
+	//On configure la MMU avec la table des pages système
+    invalidate_TLB();
+    configure_mmu_kernel();
 	
 	if(dataFaultStatus == TRANSLATION_FAULT_PAGE) {
-		//uart_send_str("Data fault -- translation fault, page level");
+		uart_send_str("Data fault -- translation fault, page level\n");
 	}
 	else if(dataFaultStatus == ACCESS_FAULT) {
-		//uart_send_str("Data fault -- access fault");
+		uart_send_str("Data fault -- access fault\n");
 	}
 	else if(dataFaultStatus == PERMISSION_FAULT) {
-		//uart_send_str("Data fault -- permission fault");
+		uart_send_str("Data fault -- permission fault\n");
 	}
 	else if(dataFaultStatus == TRANSLATION_FAULT_SECTION) {
-		//uart_send_str("Data fault -- translation fault, section level");
+		uart_send_str("Data fault -- translation fault, section level\n");
 	}
 	else {
-		//uart_send_str("Data fault -- Undefined data fault");
+		uart_send_str("Data fault -- Undefined data fault\n");
 	}
 	//uart_send_str("at address %d", faultAddress);
 	
 	// Stop current process
-	//uart_send_str("Stopping current process");
+	uart_send_str("Stopping current process\n");
     sys_exit(- dataFaultStatus);
 }
 

@@ -47,7 +47,7 @@ kmain(void){
 
     /** Exemple de sortie console **/
     uart_init();
-    uart_send_str("hello");
+    uart_send_str("hello\n");
 
     sched_init();
 
