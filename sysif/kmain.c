@@ -3,11 +3,13 @@
 #include "sched.h"
 #include "hw.h"
 #include "asm_tools.h"
+#include "uart.h"
 
 void low_priority()
 {
 	int v1 = 0;
 	while(++v1 < 5){
+		uart_send_str("low_priority s'execute...\n");
 		sys_yield();
 	}
 }
@@ -16,6 +18,7 @@ void high_priority_1()
 {
 	int v2 = 0;
 	while(++v2 < 5){
+		uart_send_str("high_priority_1 s'execute...\n");
 		sys_yield();
 	}
 }
@@ -24,6 +27,7 @@ void high_priority_2()
 {
 	int v3 = 0;
 	while(++v3 < 3){
+		uart_send_str("high_priority_2 s'execute...\n");
 		sys_yield();
 	}
 }
@@ -31,6 +35,7 @@ void high_priority_2()
 void
 kmain(void)
 {
+	uart_init();
 	
 	sched_init();
 	

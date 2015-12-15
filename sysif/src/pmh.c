@@ -18,7 +18,7 @@ void max_heap_add(process_max_heap * pmh, struct pcb_s * process_to_add)
 	// Percolations vers le haut
 	unsigned int process_index = pmh->last_used_index;
 	unsigned int father_index = get_father_index(pmh, process_index);
-	while(pmh->heap[father_index]->priority < process_to_add->priority){
+	while(process_index > 1 && pmh->heap[father_index]->priority < process_to_add->priority){
 		switch_indexes(pmh, father_index, process_index);
 		process_index = father_index;
 		father_index = get_father_index(pmh, process_index);
@@ -29,8 +29,8 @@ void max_heap_add(process_max_heap * pmh, struct pcb_s * process_to_add)
 // Retourne la pcb supprimée.
 struct pcb_s * max_heap_remove(process_max_heap * pmh)
 {
-	pmh->last_used_index--;
 	switch_indexes(pmh, 1, pmh->last_used_index);
+	pmh->last_used_index--;
 	
 	// Percolations vers le bas.
 	unsigned int process_index = 1;
@@ -39,7 +39,14 @@ struct pcb_s * max_heap_remove(process_max_heap * pmh)
 		child1_index = get_first_child_index(pmh, process_index);
 		child2_index = get_second_child_index(pmh, process_index);
 		
-		if(pmh->heap[child1_index]->priority > pmh->heap[child2_index]->priority)
+		if(child1_index == 0 && child2_index == 0)
+			break; // Plus de fils, on arrête les percolations.
+		
+		if(child1_index == 0)
+			greatest_index = child2_index;
+		else if(child2_index == 0)
+			greatest_index = child1_index;
+		else if(pmh->heap[child1_index]->priority > pmh->heap[child2_index]->priority)
 			greatest_index = child1_index;
 		else
 			greatest_index = child2_index;
@@ -48,7 +55,7 @@ struct pcb_s * max_heap_remove(process_max_heap * pmh)
 			switch_indexes(pmh, greatest_index, process_index);
 			process_index = greatest_index;
 		} else
-			break;
+			break; // Les fils ont des priorités inférieures, on arrête les percolations.
 	}
 	
 	return pmh->heap[pmh->last_used_index + 1];
@@ -68,16 +75,22 @@ unsigned int get_father_index(process_max_heap * pmh, unsigned int index)
 	return index >> 1;
 }
 
-// Obtient l'indice du premier enfant d'un élément.
-// Retourne -1 s'il n'existe pas.
+// Obtient l'indice du premier enfant d'un élément, ou -1 si celui-ci n'existe pas.
+// Retourne 0 s'il n'existe pas.
 unsigned int get_first_child_index(process_max_heap * pmh, unsigned int index)
 {
-	return index << 1;
+	unsigned int child_index = index << 1;
+	if(child_index > pmh->last_used_index)
+		return 0;
+	return child_index;
 }
 
-// Obtiens l'indice du second enfant d'un élément.
-// Retourne -1 s'il n'existe pas.
+// Obtiens l'indice du second enfant d'un élément, ou -1 si celui-ci n'existe pas.
+// Retourne 0 s'il n'existe pas.
 unsigned int get_second_child_index(process_max_heap * pmh, unsigned int index)
 {
-	return (index << 1) + 1;
+	unsigned int child_index = (index << 1) + 1;
+	if(child_index > pmh->last_used_index)
+		return 0;
+	return child_index;
 }
