@@ -35,9 +35,11 @@ void configure_mmu_kernel();
 
 void configure_mmu_C(register unsigned int pt_addr);
 
-void* vmem_alloc_for_userland(struct pcb_s* process);
+void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages);
 
-void vmem_desalloc_for_userland(struct pcb_s* process, void* page);
+void vmem_desalloc_for_userland(struct pcb_s* process, void* page, int nbPages);
+
+
 
 #endif
 

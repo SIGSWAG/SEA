@@ -23,11 +23,11 @@ void do_sys_gettime();
 
 void irq_handler();
 
-void* sys_mmap();
+void* sys_mmap(int nbPages);
 
 void do_sys_mmap(uint32_t * sp_param);
 
-void sys_munmap(void* pointer);
+void sys_munmap(void* pointer, int nbPages);
 
 void do_sys_munmap(uint32_t * sp_param);
 #endif

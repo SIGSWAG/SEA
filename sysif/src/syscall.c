@@ -188,9 +188,10 @@ void do_sys_gettime() {
 }
 
 
-void* sys_mmap()
+void* sys_mmap(int nbPages)
 {
     __asm("mov r0, #8");
+    __asm("mov r1, %0" : : "r"(nbPages));
     __asm("SWI #0");
 
 
@@ -199,15 +200,16 @@ void* sys_mmap()
 
 void do_sys_mmap(uint32_t * sp_param){
 
-    void* ret = vmem_alloc_for_userland(current_process);
+    void* ret = vmem_alloc_for_userland(current_process, (int)sp_param[1]);
     sp_param[0] = (uint32_t) ret;
 
 }
 
-void sys_munmap(void* pointer){
+void sys_munmap(void* pointer, int nbPages){
 
     __asm("mov r0, #9");
     __asm("mov r1, %0" : : "r"(pointer));
+    __asm("mov r2, %0" : : "r"(nbPages));
     __asm("SWI #0");
 
 
@@ -217,7 +219,8 @@ void do_sys_munmap(uint32_t * sp_param){
 
 
     void * pointer = (void*) sp_param[1];
-    vmem_desalloc_for_userland(current_process, pointer);
+    int nbPages = (int)sp_param[2];
+    vmem_desalloc_for_userland(current_process, pointer, nbPages);
 
 
 }

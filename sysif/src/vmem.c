@@ -12,6 +12,7 @@
 #define TABLE_2_NORMAL_PERIPH  0b000000110110
 #define TABLE_2_NORMAL_MEM  0b000001110010
 #define TABLE_1_NORMAL  0b0000000001
+#define TABLE_2_NORMAL_MEM_RO 0b001001110010
 
 /** Fautes d'accès aux données **/
 // Descripteur de niveau 2 (deuxième table des pages) invalide (bits 00 dans l'entrée)
@@ -28,41 +29,41 @@ unsigned int * table_kernel;
 // Data abort handler (faute traduction / faute d'accès)
 void data_handler(){
     uint32_t dataFaultStatus;
-	uint32_t faultAddress;
-	uint32_t dfsr;
-	
-	// Cause de la faute
-	__asm volatile("MRC p15, 0, %0, c5, c0, 0" : "=r"(dfsr));
-	
-	// On récupère les bits [3:0] pour avoir la cause
-	dataFaultStatus = dfsr & 0xF;
-	
-	// Adresse virtuelle qui a causé la faute
-	__asm volatile("MRC p15, 0, %0, c6, c0, 0" : "=r"(faultAddress));
-	
-	//On configure la MMU avec la table des pages système
+    uint32_t faultAddress;
+    uint32_t dfsr;
+
+    // Cause de la faute
+    __asm volatile("MRC p15, 0, %0, c5, c0, 0" : "=r"(dfsr));
+
+    // On récupère les bits [3:0] pour avoir la cause
+    dataFaultStatus = dfsr & 0xF;
+
+    // Adresse virtuelle qui a causé la faute
+    __asm volatile("MRC p15, 0, %0, c6, c0, 0" : "=r"(faultAddress));
+
+    //On configure la MMU avec la table des pages système
     invalidate_TLB();
     configure_mmu_kernel();
-	
-	if(dataFaultStatus == TRANSLATION_FAULT_PAGE) {
-		uart_send_str("Data fault -- translation fault, page level\n");
-	}
-	else if(dataFaultStatus == ACCESS_FAULT) {
-		uart_send_str("Data fault -- access fault\n");
-	}
-	else if(dataFaultStatus == PERMISSION_FAULT) {
-		uart_send_str("Data fault -- permission fault\n");
-	}
-	else if(dataFaultStatus == TRANSLATION_FAULT_SECTION) {
-		uart_send_str("Data fault -- translation fault, section level\n");
-	}
-	else {
-		uart_send_str("Data fault -- Undefined data fault\n");
-	}
-	//uart_send_str("at address %d", faultAddress);
-	
-	// Stop current process
-	uart_send_str("Stopping current process\n");
+
+    if(dataFaultStatus == TRANSLATION_FAULT_PAGE) {
+        uart_send_str("Data fault -- translation fault, page level\n");
+    }
+    else if(dataFaultStatus == ACCESS_FAULT) {
+        uart_send_str("Data fault -- access fault\n");
+    }
+    else if(dataFaultStatus == PERMISSION_FAULT) {
+        uart_send_str("Data fault -- permission fault\n");
+    }
+    else if(dataFaultStatus == TRANSLATION_FAULT_SECTION) {
+        uart_send_str("Data fault -- translation fault, section level\n");
+    }
+    else {
+        uart_send_str("Data fault -- Undefined data fault\n");
+    }
+    //uart_send_str("at address %d", faultAddress);
+
+    // Stop current process
+    uart_send_str("Stopping current process\n");
     sys_exit(- dataFaultStatus);
 }
 
@@ -172,29 +173,31 @@ unsigned int * init_table_page()
         if(!(i < (((unsigned int)&__kernel_heap_end__) >> 20)) )
         {
             table1[i] = 0x0;
-            continue;
-        }else if(i < (((unsigned int)&__kernel_heap_end__) >> 20))//on redirige vers les tables du noyau
+
+        }else if(i > (((unsigned int)&__kernel_heap_start__) >> 20))//on redirige vers les tables du noyau, heap
         {
-            table1[i] = table_kernel[i];
-            continue;
+            table1[i] = table_kernel[i] ;
+
+
+        }else{ //reste du noyau, en RO
+
+            TABLE_2_BITSET = TABLE_2_NORMAL_MEM_RO;
+
+
+            /** On alloue une table de niveau 2 alignée sur 1024 **/
+            unsigned int * table2 = (unsigned int *) kAlloc_aligned(SECON_LVL_TT_SIZE, 10);
+
+            /** Pour chaque entrée dans cette table **/
+            for(unsigned int j = 0; j < SECON_LVL_TT_COUNT; j++){
+                /** concat i|j|champ de bits **/
+                table2[j] = (i<<20) | (j<<12) | TABLE_2_BITSET;
+            }
+            /** On place l'adresse de la table de niveau 2 dans la table de niveau 1**/
+            table1[i] = (unsigned int)table2 | TABLE_1_NORMAL; //table2|champ de bits
         }
-
-        TABLE_2_BITSET = TABLE_2_NORMAL_MEM;
-
-
-        /** On alloue une table de niveau 2 alignée sur 1024 **/
-        unsigned int * table2 = (unsigned int *) kAlloc_aligned(SECON_LVL_TT_SIZE, 10);
-
-        /** Pour chaque entrée dans cette table **/
-        for(unsigned int j = 0; j < SECON_LVL_TT_COUNT; j++){
-            /** concat i|j|champ de bits **/
-            table2[j] = (i<<20) | (j<<12) | TABLE_2_BITSET;
-        }
-        /** On place l'adresse de la table de niveau 2 dans la table de niveau 1 **/
-        table1[i] = (unsigned int)table2 | TABLE_1_NORMAL; //table2|champ de bits
     }
 
-    return table1;;
+    return table1;
 
 }
 
@@ -210,7 +213,7 @@ int init_kern_translation_table(void)
     table_kernel = init_kernel_table_page();
 
     configure_mmu_C((unsigned int)table_kernel);
-    
+
     return 0;
 }
 
@@ -237,7 +240,7 @@ void vmem_init()
 
 
 
-void* vmem_alloc_for_userland(struct pcb_s* process)
+void* vmem_alloc_for_userland_single(struct pcb_s* process)
 {
 
     //On recherche une Page libre : TODO si plus de block libre ?
@@ -312,7 +315,119 @@ void* vmem_alloc_for_userland(struct pcb_s* process)
 }
 
 
-void vmem_desalloc_for_userland(struct pcb_s* process, void* page)
+void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages)
+{
+
+    //On recherche une Page libre : TODO si plus de block libre ?
+    struct block * current_block = 0;
+    struct block * iterate_block =  process->first_empty_block;
+    int foundBlock = 0;
+
+    while(iterate_block != 0 && foundBlock == 0){//on cherche un bloc
+
+        if(iterate_block->block_size >= nbPages){
+            current_block = iterate_block;
+            foundBlock = 1;
+        }
+        iterate_block = iterate_block->next;
+
+    }
+    if(current_block == 0){ //pas de bloc disponible
+        return 0;
+    }
+
+    unsigned int * table1 = current_process->page_table;
+    void* retour = current_block->first_page;
+
+
+    //On cherche nbPages Frames libres;
+    int indexOccup = 0;
+    int* addresses  = (int*) kAlloc(sizeof(int)*nbPages);//tableau qui contiendra les adresses des frames
+    int indexAddr = 0;
+
+    while(indexAddr < nbPages && indexOccup < OCCUPATION_TABLE_SIZE)//tant que le tableau n'est pas rempli
+    {
+
+        if(occupation_table[indexOccup] == 0){
+
+
+            addresses[indexAddr] = indexOccup;
+            indexAddr++;
+        }
+        indexOccup++;
+    }
+
+
+    if(indexAddr < nbPages){//pas assez de frames
+        kFree((void *)addresses, sizeof(int)*nbPages);//libération du tableau
+        return 0;
+
+    }
+
+    for(int i=0; i<nbPages; i++){//on alloue les frames
+
+        //addresse de la page
+        int address = END_KERNEL_MEM + addresses[i]*PAGE_SIZE; // calcul de l'offset
+
+
+        int offsetFirstTable =((unsigned int)address)>>20; //12 premiers bits => offset dans la première table
+        int offsetSecondTable = (((unsigned int)address)<<12)>>24 ; //10 bits suivants => offset dans la deuxième table;
+
+
+        unsigned int * table2;
+
+
+        if(table1[offsetFirstTable] == 0x0){//pas de table de niveau 2, il faut allouer
+
+            /** On alloue une table de niveau 2 alignée sur 1024 **/
+            table2 = (unsigned int *) kAlloc_aligned(SECON_LVL_TT_SIZE, 10);
+
+            /** Pour chaque entrée dans cette table **/
+            for(unsigned int j = 0; j < SECON_LVL_TT_COUNT; j++){
+
+                table2[j]=0x0;
+
+            }
+            /** On place l'adresse de la table de niveau 2 dans la table de niveau 1 **/
+            table1[offsetFirstTable] = (unsigned int)table2 | TABLE_1_NORMAL; //table2|champ de bits
+
+
+        }else{
+
+            table2 = (unsigned int*)((((unsigned int)table1[offsetFirstTable])>>10)<<10); //22 premiers bits, alignés sur 1024
+
+        }
+
+        table2[offsetSecondTable] = ((address>>12)<<12) | TABLE_2_NORMAL_MEM;//descripteur de niveau 2
+
+
+        current_block->block_size--;//une page de moins dans le bloc
+
+        if(current_block->block_size == 0){ //le bloc est vide, on branche sur le suivant TODO libération mémoire
+            current_process->first_empty_block = current_process->first_empty_block->next;
+            current_process->first_empty_block->previous = 0;
+        }else{
+            current_block->first_page = (int*) ((unsigned int)(current_block->first_page) + PAGE_SIZE);
+        }
+
+        occupation_table[addresses[i]] = 1; //la frame est marquée occupée
+
+    }
+
+
+
+    kFree((void *)addresses, sizeof(int)*nbPages);//libération du tableau
+    return retour;
+
+}
+
+
+
+
+
+
+
+void vmem_desalloc_for_userland_single(struct pcb_s* process, void* page)
 {
 
 
@@ -328,7 +443,7 @@ void vmem_desalloc_for_userland(struct pcb_s* process, void* page)
     unsigned int address = (table2[offsetSecondTable]>>12)<<12;
     table2[offsetSecondTable] = 0x0; //libération de la page
 
-    int offset =  (address - END_KERNEL_MEM) % PAGE_SIZE;
+    int offset =  (address - END_KERNEL_MEM) / PAGE_SIZE;
 
     occupation_table[offset] = 0;//libération de la frame physique
 
@@ -378,7 +493,7 @@ void vmem_desalloc_for_userland(struct pcb_s* process, void* page)
 
             unsigned int lastPage = (unsigned int) currentBlock->previous->first_page + currentBlock->previous->block_size * PAGE_SIZE; //dernière page du bloc
 
-            if(lastPage == ((unsigned int)(pageToFree) - PAGE_SIZE)){ //insertion juste après le bloc précédent CAS 3
+            if(lastPage == ((unsigned int)(pageToFree))){ //insertion juste après le bloc précédent CAS 3
                 currentBlock->previous->block_size++;
 
             }else{ //création d'un nouveau bloc CAS 4
@@ -409,7 +524,7 @@ void vmem_desalloc_for_userland(struct pcb_s* process, void* page)
 
         unsigned int lastPage = (unsigned int) precedingBlock->first_page + currentBlock->previous->block_size * PAGE_SIZE;//derniere page du dernier nloc
 
-        if(lastPage ==  ((unsigned int)(pageToFree) - PAGE_SIZE)){ //insertion après le bloc précédent CAS 6
+        if(lastPage ==  ((unsigned int)(pageToFree))){ //insertion après le bloc précédent CAS 6
             precedingBlock->block_size++;
 
         }else{ //nouveau bloc en fin de liste CAS 7
@@ -428,6 +543,19 @@ void vmem_desalloc_for_userland(struct pcb_s* process, void* page)
 
     }
 
+
+
+}
+
+
+void vmem_desalloc_for_userland(struct pcb_s* process, void* page, int nbPages){
+
+    for(int i=0; i<nbPages; i++){
+        void* pageToFree = (void*)( ((unsigned int)page)+ i*PAGE_SIZE);
+        vmem_desalloc_for_userland_single(process, pageToFree);
+
+
+    }
 
 
 }
@@ -500,6 +628,9 @@ uint32_t vmem_translate(uint32_t va, struct pcb_s* process)
     return pa;
 
 }
+
+
+
 
 
 
