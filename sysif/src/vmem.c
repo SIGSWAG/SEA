@@ -204,7 +204,7 @@ unsigned int * init_table_page()
             /** Pour chaque entrée dans cette table **/
             for(unsigned int j = 0; j < SECON_LVL_TT_COUNT; j++){
 
-                if( (i<<10|j) >= kernel_heap_begin){ //la page est au dela du début du heap, faute de traduction
+                if( 1>3 && (i<<10|j) >= kernel_heap_begin){ //la page est au dela du début du heap, faute de traduction WARNING DEBUG
                     table2[j]=0x0;
                 }else{
                     /** concat i|j|champ de bits **/
@@ -575,8 +575,20 @@ void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages)
         current_block->block_size--;//une page de moins dans le bloc
 
         if(current_block->block_size == 0){ //le bloc est vide, on branche sur le suivant TODO libération mémoire
-            process->first_empty_block = process->first_empty_block->next;
-            process->first_empty_block->previous = 0;
+            if(current_block==process->first_empty_block){
+
+                process->first_empty_block = process->first_empty_block->next;
+                process->first_empty_block->previous = 0;
+
+            }else{
+
+                current_block->previous->next = current_block->next;
+                current_block->next->previous = current_block->previous;
+
+            }
+
+             kFree((void *)current_block, sizeof(struct block));//libération du tableau
+
         }else{
             current_block->first_page = (int*) ((unsigned int)(current_block->first_page) + PAGE_SIZE);
         }

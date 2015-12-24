@@ -41,10 +41,16 @@ void user_process3()
     int* alloc = (int*) sys_mmap(2);
     alloc[0] = 1337;
     int * alloc2 = (int*) sys_mmap(1);
+    int * alloc3 = (int*) sys_mmap(1);
+    int * alloc4 = (int*) sys_mmap(2);
+    alloc4[0]=339;
+    alloc3[0]=5;
     alloc2[0] = 12345;
-    sys_munmap((void*)alloc, 2);
 
-    
+
+    sys_munmap((void*)alloc2, 1);
+    sys_munmap((void*)alloc4, 2);
+
     int v3 = 0;
     while( 1 ) {
         v3 += 5;
@@ -61,7 +67,7 @@ kmain(void){
 
     sched_init();
 
-    create_process((func_t*) &user_process1);
+    //create_process((func_t*) &user_process1);
     //create_process((func_t*) &user_process2);
     create_process((func_t*) &user_process3);
 

@@ -69,6 +69,12 @@ void sys_yield();
 void sys_yieldto(struct pcb_s* dest);
 
 /**
+ * @brief do_sys_yield
+ * @param sp_param_base
+ */
+void do_sys_yield(uint32_t * sp_param_base);
+
+/**
  * @brief do_sys_yieldto
  * @param sp_param_base
  */
