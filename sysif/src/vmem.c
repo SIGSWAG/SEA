@@ -8,7 +8,7 @@
 #define END_IO_MAPPED_MEM 0x20FFFFFF
 #define END_KERNEL_MEM 0x1000000
 
-/** champs de bits **/
+/** champs de bits pour descripteurs**/
 #define TABLE_2_NORMAL_PERIPH  0b000000110110
 #define TABLE_2_NORMAL_MEM  0b000001110010
 #define TABLE_1_NORMAL  0b0000000001
@@ -26,7 +26,9 @@ uint8_t * occupation_table;
 
 unsigned int * table_kernel;
 
-// Data abort handler (faute traduction / faute d'accès)
+/**
+ * @brief data_handler (pour fautes de traductions/accès)
+ */
 void data_handler(){
     uint32_t dataFaultStatus;
     uint32_t faultAddress;
@@ -115,6 +117,12 @@ void configure_mmu_C(register unsigned int pt_addr)
     __asm volatile("mcr p15, 0, %[r], c3, c0, 0" : : [r] "r" (0x3));
 }
 
+
+
+/**
+ * @brief init_kernel_table_page
+ * @return
+ */
 unsigned int * init_kernel_table_page()
 {
     /** On alloue la table des pages de niveau 1 alignée sur 16384 **/
@@ -156,7 +164,10 @@ unsigned int * init_kernel_table_page()
     
     return table1;
 }
-
+/**
+ * @brief init_table_page
+ * @return
+ */
 unsigned int * init_table_page()
 {
 
@@ -174,12 +185,15 @@ unsigned int * init_table_page()
         {
             table1[i] = 0x0;
 
-        }else if(i > (((unsigned int)&__kernel_heap_start__) >> 20))//on redirige vers les tables du noyau, heap
+        }else if(i > (((unsigned int)&__kernel_heap_start__) >> 20))//on heap, aucun accès
         {
-            table1[i] = table_kernel[i] ;
+            table1[i] = 0x0;//table_kernel[i] ;
 
 
         }else{ //reste du noyau, en RO
+
+
+            unsigned int kernel_heap_begin = (((unsigned int)&__kernel_heap_start__) >> 12); //adresse de la page contenant le début du heap noyau
 
             TABLE_2_BITSET = TABLE_2_NORMAL_MEM_RO;
 
@@ -189,8 +203,13 @@ unsigned int * init_table_page()
 
             /** Pour chaque entrée dans cette table **/
             for(unsigned int j = 0; j < SECON_LVL_TT_COUNT; j++){
-                /** concat i|j|champ de bits **/
-                table2[j] = (i<<20) | (j<<12) | TABLE_2_BITSET;
+
+                if( (i<<10|j) >= kernel_heap_begin){ //la page est au dela du début du heap, faute de traduction
+                    table2[j]=0x0;
+                }else{
+                    /** concat i|j|champ de bits **/
+                    table2[j] = (i<<20) | (j<<12) | TABLE_2_BITSET;
+                }
             }
             /** On place l'adresse de la table de niveau 2 dans la table de niveau 1**/
             table1[i] = (unsigned int)table2 | TABLE_1_NORMAL; //table2|champ de bits
@@ -202,12 +221,55 @@ unsigned int * init_table_page()
 }
 
 
+/**
+ * @brief free_process_memory
+ * @param process
+ */
+void free_process_memory(struct pcb_s* process){
+
+
+    unsigned int* table1 = process->page_table;
+
+
+    for(int i=0; i<FIRST_LVL_TT_COUNT;i++){//pour chaque entrée de la table des pages de niveau 1
+
+        if(!(i < (END_KERNEL_MEM >> 20)) )//on va a la table de niveau 2
+        {
+            unsigned int * table2;
+            if(table1[i]!=0x0){
+                table2 = (unsigned int*)((((unsigned int)table1[i])>>10)<<10); //22 premiers bits, alignés sur 1024
+
+                for(int j=0; j<SECON_LVL_TT_COUNT; j++){//pour chaque entrée dans la table de niveau 2
+
+                    if(table2[j]!=0x0){//on libère
+
+                        int address = ((table2[j]>>12)<<12);
+
+                        int offset = (address - END_KERNEL_MEM) / PAGE_SIZE;
+
+                        occupation_table[offset]=0;
+
+                    }
+                }
+
+
+                kFree((uint8_t*)table2, SECON_LVL_TT_SIZE);
+            }
+        }
+
+
+    }
+
+    kFree((uint8_t*)table1, FIRST_LVL_TT_SIZE);
+
+}
 
 
 
-
-
-
+/**
+ * @brief init_kern_translation_table
+ * @return
+ */
 int init_kern_translation_table(void)
 {
     table_kernel = init_kernel_table_page();
@@ -217,6 +279,9 @@ int init_kern_translation_table(void)
     return 0;
 }
 
+/**
+ * @brief init_occupation_table
+ */
 void init_occupation_table(void)
 {
 
@@ -228,7 +293,9 @@ void init_occupation_table(void)
 
 
 }
-
+/**
+ * @brief vmem_init
+ */
 void vmem_init()
 {
 
@@ -238,15 +305,117 @@ void vmem_init()
 
 }
 
+/**
+ * @brief allocate_stack_for_process
+ * @param process
+ * @param nbPages
+ * @return
+ */
+void* allocate_stack_for_process(struct pcb_s* process, int nbPages){
+
+    //on alloue dans le premier(et donc dernier) bloc
+    struct block * current_block = process->first_empty_block;
+    int* page = (int*)0xFFFFFFFF; //adresse de la première page (fin de la RAM, pile descendante)
+    unsigned int * table1 = process->page_table;
 
 
+    //On cherche nbPages Frames libres;
+    int indexOccup = 0;
+    int* addresses  = (int*) kAlloc(sizeof(int)*nbPages);//tableau qui contiendra les adresses des frames
+    int indexAddr = 0;
+
+    while(indexAddr < nbPages && indexOccup < OCCUPATION_TABLE_SIZE)//tant que le tableau n'est pas rempli
+    {
+
+        if(occupation_table[indexOccup] == 0){
+
+
+            addresses[indexAddr] = indexOccup;
+            indexAddr++;
+        }
+        indexOccup++;
+    }
+
+
+    if(indexAddr < nbPages){//pas assez de frames
+        kFree((void *)addresses, sizeof(int)*nbPages);//libération du tableau
+        return 0;
+
+    }
+
+    for(int i=0; i<nbPages; i++){//on alloue les frames
+
+        //addresse de la frame
+        int addressFrame = END_KERNEL_MEM + addresses[i]*PAGE_SIZE; // calcul de l'offset
+
+        //adresse de la page
+        int addressPage = (int)(page) - i*PAGE_SIZE;
+
+        int offsetFirstTable =((unsigned int)addressPage)>>20; //12 premiers bits => offset dans la première table
+        int offsetSecondTable = (((unsigned int)addressPage)<<12)>>24 ; //10 bits suivants => offset dans la deuxième table;
+
+
+        unsigned int * table2;
+
+
+        if(table1[offsetFirstTable] == 0x0){//pas de table de niveau 2, il faut allouer
+
+            // On alloue une table de niveau 2 alignée sur 1024
+            table2 = (unsigned int *) kAlloc_aligned(SECON_LVL_TT_SIZE, 10);
+
+            // Pour chaque entrée dans cette table
+            for(unsigned int j = 0; j < SECON_LVL_TT_COUNT; j++){
+
+                table2[j]=0x0;
+
+            }
+            //On place l'adresse de la table de niveau 2 dans la table de niveau 1
+            table1[offsetFirstTable] = (unsigned int)table2 | TABLE_1_NORMAL; //table2|champ de bits
+
+
+        }else{
+
+            table2 = (unsigned int*)((((unsigned int)table1[offsetFirstTable])>>10)<<10); //22 premiers bits, alignés sur 1024
+
+        }
+        table2[offsetSecondTable] = ((addressFrame>>12)<<12) | TABLE_2_NORMAL_MEM;//descripteur de niveau 2
+
+
+        current_block->block_size--;//une page de moins dans le bloc
+
+        table2[offsetSecondTable] = ((addressFrame>>12)<<12) | TABLE_2_NORMAL_MEM;//descripteur de niveau 2
+
+        if(current_block->block_size == 0){ //le bloc est vide, on branche sur le suivant TODO libération mémoire
+            return 0;
+        }
+
+        occupation_table[addresses[i]] = 1; //la frame est marquée occupée
+
+    }
+
+
+
+
+    kFree((void *)addresses, sizeof(int)*nbPages);//libération du tableau
+
+    return page;
+}
+
+
+
+
+/**
+ * @brief vmem_alloc_for_userland_single
+ * @param process
+ * @return
+ */
 void* vmem_alloc_for_userland_single(struct pcb_s* process)
 {
 
     //On recherche une Page libre : TODO si plus de block libre ?
     struct block * first_block = process->first_empty_block;
     int* page = first_block->first_page; //adresse de la première page
-    unsigned int * table1 = current_process->page_table;
+    unsigned int * table1 = process->page_table;
 
 
 
@@ -298,8 +467,8 @@ void* vmem_alloc_for_userland_single(struct pcb_s* process)
             first_block->block_size--;//une page de moins dans le bloc
 
             if(first_block->block_size == 0){ //le bloc est vide, on branche sur le suivant TODO libération mémoire
-                current_process->first_empty_block = current_process->first_empty_block->next;
-                current_process->first_empty_block->previous = 0;
+                process->first_empty_block = process->first_empty_block->next;
+                process->first_empty_block->previous = 0;
             }else{
                 first_block->first_page = (int*) ((unsigned int)(first_block->first_page) + PAGE_SIZE);
             }
@@ -336,7 +505,7 @@ void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages)
         return 0;
     }
 
-    unsigned int * table1 = current_process->page_table;
+    unsigned int * table1 = process->page_table;
     void* retour = current_block->first_page;
 
 
@@ -366,12 +535,14 @@ void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages)
 
     for(int i=0; i<nbPages; i++){//on alloue les frames
 
-        //addresse de la page
-        int address = END_KERNEL_MEM + addresses[i]*PAGE_SIZE; // calcul de l'offset
+        //addresse de la frame
+        int addressFrame = END_KERNEL_MEM + addresses[i]*PAGE_SIZE; // calcul de l'offset
 
+        //adresse de la page
+        int addressPage = ((int) retour )+ i*PAGE_SIZE;
 
-        int offsetFirstTable =((unsigned int)address)>>20; //12 premiers bits => offset dans la première table
-        int offsetSecondTable = (((unsigned int)address)<<12)>>24 ; //10 bits suivants => offset dans la deuxième table;
+        int offsetFirstTable =((unsigned int)addressPage)>>20; //12 premiers bits => offset dans la première table
+        int offsetSecondTable = (((unsigned int)addressPage)<<12)>>24 ; //10 bits suivants => offset dans la deuxième table;
 
 
         unsigned int * table2;
@@ -398,14 +569,14 @@ void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages)
 
         }
 
-        table2[offsetSecondTable] = ((address>>12)<<12) | TABLE_2_NORMAL_MEM;//descripteur de niveau 2
+        table2[offsetSecondTable] = ((addressFrame>>12)<<12) | TABLE_2_NORMAL_MEM;//descripteur de niveau 2
 
 
         current_block->block_size--;//une page de moins dans le bloc
 
         if(current_block->block_size == 0){ //le bloc est vide, on branche sur le suivant TODO libération mémoire
-            current_process->first_empty_block = current_process->first_empty_block->next;
-            current_process->first_empty_block->previous = 0;
+            process->first_empty_block = process->first_empty_block->next;
+            process->first_empty_block->previous = 0;
         }else{
             current_block->first_page = (int*) ((unsigned int)(current_block->first_page) + PAGE_SIZE);
         }
@@ -426,7 +597,11 @@ void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages)
 
 
 
-
+/**
+ * @brief vmem_desalloc_for_userland_single
+ * @param process
+ * @param page
+ */
 void vmem_desalloc_for_userland_single(struct pcb_s* process, void* page)
 {
 
@@ -466,7 +641,7 @@ void vmem_desalloc_for_userland_single(struct pcb_s* process, void* page)
         block->first_page = (int*) pageToFree;
         block->next = 0;
         block->previous = 0;
-        current_process->first_empty_block = block;
+        process->first_empty_block = block;
     }
 
 
@@ -491,7 +666,7 @@ void vmem_desalloc_for_userland_single(struct pcb_s* process, void* page)
 
         }else if(currentBlock->previous !=0){ //insertion au niveau du bloc précédent
 
-            unsigned int lastPage = (unsigned int) currentBlock->previous->first_page + currentBlock->previous->block_size * PAGE_SIZE; //dernière page du bloc
+            unsigned int lastPage = (unsigned int) currentBlock->previous->first_page + currentBlock->previous->block_size * PAGE_SIZE; //premiere page apres le bloc
 
             if(lastPage == ((unsigned int)(pageToFree))){ //insertion juste après le bloc précédent CAS 3
                 currentBlock->previous->block_size++;
@@ -517,12 +692,12 @@ void vmem_desalloc_for_userland_single(struct pcb_s* process, void* page)
             block->next = currentBlock; //un seul bloc disponible
             block->previous = 0;
             currentBlock->previous = block;
-            current_process->first_empty_block = block;
+            process->first_empty_block = block;
 
         }
     }else{//on était au dernier block, insertion après le dernier bloc
 
-        unsigned int lastPage = (unsigned int) precedingBlock->first_page + currentBlock->previous->block_size * PAGE_SIZE;//derniere page du dernier nloc
+        unsigned int lastPage = (unsigned int) precedingBlock->first_page + currentBlock->previous->block_size * PAGE_SIZE;//premiere page apres le  dernier bloc
 
         if(lastPage ==  ((unsigned int)(pageToFree))){ //insertion après le bloc précédent CAS 6
             precedingBlock->block_size++;
@@ -547,7 +722,13 @@ void vmem_desalloc_for_userland_single(struct pcb_s* process, void* page)
 
 }
 
-
+/**
+ * @brief vmem_desalloc_for_userland permet de désallouer nbPages commençant à page.
+ * Le comportement de cette méthode n'est garanti que si nbPages ont été allouées a partir de page par vmem_alloc_for_userland
+ * @param process
+ * @param page
+ * @param nbPages
+ */
 void vmem_desalloc_for_userland(struct pcb_s* process, void* page, int nbPages){
 
     for(int i=0; i<nbPages; i++){
@@ -565,7 +746,12 @@ void vmem_desalloc_for_userland(struct pcb_s* process, void* page, int nbPages){
 
 
 
-
+/**
+ * @brief vmem_translate
+ * @param va
+ * @param process
+ * @return
+ */
 uint32_t vmem_translate(uint32_t va, struct pcb_s* process)
 {
     uint32_t pa; /*The result*/

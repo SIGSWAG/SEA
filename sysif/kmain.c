@@ -27,7 +27,7 @@ void user_process2()
 {
 
     int v2 = -12;
-    while( 1 ) {
+    while( 1 ){
         v2 -= 2;
     }
 }
@@ -61,7 +61,7 @@ kmain(void){
 
     sched_init();
 
-    //create_process((func_t*) &user_process1);
+    create_process((func_t*) &user_process1);
     //create_process((func_t*) &user_process2);
     create_process((func_t*) &user_process3);
 

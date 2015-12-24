@@ -36,25 +36,55 @@ struct pcb_s {
 };
 
 
-
+/**
+ * @brief create_process
+ * @param entry
+ */
 void create_process(func_t* entry);
 
+/**
+ * @brief start_current_process
+ */
 void start_current_process();
 
+/**
+ * @brief sched_init
+ */
 void sched_init();
 
+/**
+ * @brief elect
+ */
 void elect();
 
+/**
+ * @brief sys_yield
+ */
 void sys_yield();
 
-void do_sys_yield();
-
+/**
+ * @brief sys_yieldto
+ * @param dest
+ */
 void sys_yieldto(struct pcb_s* dest);
 
+/**
+ * @brief do_sys_yieldto
+ * @param sp_param_base
+ */
 void do_sys_yieldto(uint32_t * sp_param_base);
 
+/**
+ * @brief sys_exit
+ * @param status
+ * @return
+ */
 int sys_exit(int status);
 
+/**
+ * @brief do_sys_exit
+ * @param sp_param_base
+ */
 void do_sys_exit(uint32_t * sp_param_base);
 
 #endif

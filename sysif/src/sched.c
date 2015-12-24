@@ -48,16 +48,14 @@ void create_process(func_t* entry)
 
 
     // Mise en place du lr_svc, lr_user, et du cpsr
-    pcb->lr_svc = (uint32_t)&start_current_process;
-    pcb->lr_user = (uint32_t)&start_current_process;
     pcb->entry = entry;
+    pcb->lr_svc = (uint32_t)&start_current_process;
+    pcb->lr_user = (uint32_t)pcb->entry;
     pcb->first_empty_block = block;
     pcb->cpsr = 0x150; //1010 10000 -> User mode + no interrupt
     //__asm("mrs %0, cpsr" : "=r"(pcb->cpsr));
 
-    //Allocation de la stack, et on fait pointer sp tout en haut de ce qu'on vient allouer vu que SP décroit
-    uint32_t * sp_zone = (uint32_t *) kAlloc(SP_SIZE);
-    pcb->sp = (uint32_t) sp_zone + SP_SIZE;
+
 
     pcb->status = PROCESS_CREATED;
 
@@ -67,7 +65,9 @@ void create_process(func_t* entry)
     pcb->next_pcb = temp_pcb;
 
     pcb->page_table = init_table_page();
-
+    //Allocation de la stack, et on fait pointer sp tout en haut de ce qu'on vient allouer vu que SP décroit
+    uint32_t * sp_zone = (uint32_t *) allocate_stack_for_process(pcb, 3);//(uint32_t *) kAlloc(SP_SIZE);
+    pcb->sp = (uint32_t) sp_zone; //+ SP_SIZE;
 
     //on reset la page des tables du processus courant
     invalidate_TLB();
@@ -76,10 +76,11 @@ void create_process(func_t* entry)
     return;
 }
 
-void start_current_process()
+void __attribute__((naked)) start_current_process()
 {
-    current_process->entry();
-    sys_exit(0);
+    __asm("blx lr");
+    __asm("mov r0, %0" : : "r"(0));
+    __asm("b sys_exit");
 }
 
 void elect() 
@@ -93,7 +94,9 @@ void elect()
         // kill next_process
         // on considère (voir implentation de kalloc/kFree) que la mémoire est organisée telle que pcb et la stack sp sont contigus.
         // de plus pcb doit être situé en dessous de la stack. On libère alors la taille de la structure et de sa stack d'un seul coup.
+        free_process_memory(process_to_kill);
         kFree((void *)process_to_kill, sizeof(struct pcb_s) + SP_SIZE);
+
 
         // S'il ne reste qu'un process dans la boucle (main)
         if(current_process->next_pcb == current_process){

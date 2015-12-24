@@ -23,23 +23,70 @@
 #include "sched.h"
 
 
-int init_kern_translation_table(void);
+/**
+ * @brief vmem_init initialie la mémoire virtuelle
+ */
 void vmem_init();
+
+/**
+ * @brief vmem_translate simule la MMU, test-purpose.
+ * @param va
+ * @param process
+ * @return
+ */
 uint32_t vmem_translate(uint32_t va, struct pcb_s* process);
 
+/**
+ * @brief alloue une table des pages et l'initialise, puis renvoie un pointeur dessus
+ * @return
+ */
 unsigned int * init_table_page();
 
 void invalidate_TLB();
-
+/**
+ * @brief configure_mmu_kernel fait pointer TTBR0 sur la table des pages kernel
+ */
 void configure_mmu_kernel();
 
+/**
+ * @brief configure_mmu_C met à jour TTBR0 pour pointer sur pt_addr
+ * @param pt_addr
+ */
 void configure_mmu_C(register unsigned int pt_addr);
 
+/**
+ * @brief vmem_alloc_for_userland permet d'allouer nbPages dans l'espace d'adressage de process
+ * s'il n'y a pas assez de place, retourne 0. Sinon, renvoie un pointeur sur la première page
+ * @param process
+ * @param nbPages
+ * @return
+ */
 void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages);
 
+/**
+ * @brief vmem_desalloc_for_userland permet de désallouer nbPages commençant à page.
+ * Le comportement de cette méthode n'est garanti que si nbPages ont été allouées a partir de page par vmem_alloc_for_userland
+ * @param process
+ * @param page
+ * @param nbPages
+ */
 void vmem_desalloc_for_userland(struct pcb_s* process, void* page, int nbPages);
 
 
+/**
+ * @brief free_process_memory permet de libérer la mémoire d'un processus. (pile, tas, table des pages)
+ * @param process
+ */
+void free_process_memory(struct pcb_s* process);
+
+/**
+ * @brief allocate_stack_for_process alloue nbPages dans les adresses hautes de la mémoire de process.
+ * Cet méthode devrait être appelée avant toute autre allocation pour process.
+ * @param process
+ * @param nbPages
+ * @return
+ */
+void* allocate_stack_for_process(struct pcb_s* process, int nbPages);
 
 #endif
 
