@@ -32,6 +32,7 @@ class LeapMotionForMusicListener(Leap.Listener):
     finger_names = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']
     bone_names = ['Metacarpal', 'Proximal', 'Intermediate', 'Distal']
     state_names = ['STATE_INVALID', 'STATE_START', 'STATE_UPDATE', 'STATE_END']
+    messages_code = {'left':'L', 'right':'R', 'up':'U', 'down':'D', 'forward':'F', 'backward':'B'}
 
     @property
     def app_width(self):
@@ -130,17 +131,17 @@ class LeapMotionForMusicListener(Leap.Listener):
             diff_z = _outsideX(position_z)
 
             if diff_x < 0:
-                messages.append("left")
+                messages.append(self.messages_code["left"])
             elif diff_x > 0:
-                messages.append("right")
+                messages.append(self.messages_code["right"])
             if diff_y < 0:
-                messages.append("forward")
+                messages.append(self.messages_code["forward"])
             elif diff_y > 0:
-                messages.append("backward")
+                messages.append(self.messages_code["backward"])
             if diff_z < 0:
-                messages.append("up")
+                messages.append(self.messages_code["up"])
             elif diff_z > 0:
-                messages.append("down")
+                messages.append(self.messages_code["down"])
             
 
             # Calculate the hand's pitch, roll, and yaw angles
