@@ -81,16 +81,19 @@ audio_test()
     for(;;)
     {
         i=0;
-        led_blink();
-        // while (&audio_data[i] < &_binary_tune_wav_end)
         while (i < size)
         {
+            
             status =  *(pwm + BCM2835_PWM_STATUS);
             if (!(status & BCM2835_FULL1))
             {
-                /* Decomment this in order to get sound */
                 *(pwm+BCM2835_PWM_FIFO) = (char)(audio_data[(unsigned long long)i] * volume);
                 i+=increment;
+            }
+            else
+            {
+                /* wait sur (status & BCM2835_FULL1) : =0 => pas plein ; !=0 => plein */
+                sys_yield();
             }
               
             if ((status & ERRORMASK))
@@ -109,21 +112,12 @@ audio_test()
 void
 audio_config()
 {
-    unsigned long long simul_pas_de_changement = 0;
     while(1)
     {
-        if(simul_pas_de_changement < /*100*/ 10 * 2) // 10ms * 100 * 2 = 2s
-        {
-            simul_pas_de_changement++;
-            sys_yield();
-        }
-        else
-        {
-            simul_pas_de_changement = 0;
-            increment = (increment) % 2 + 1;
-            volume = (volume)%2 + 1;
-            sys_yield();
-        }
+        pause(1000); // simulation d'attente entre 2 config
+        // increment = (increment) % 2 + 1;
+        // volume = (volume)%2 + 1;
+        sys_yield(); // wait à implémenter
     }
 }
 
