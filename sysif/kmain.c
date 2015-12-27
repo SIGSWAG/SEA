@@ -8,6 +8,7 @@
 void
 play_music()
 {
+//	audio_config();
 	audio_test();
 }
 

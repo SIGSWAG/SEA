@@ -92,10 +92,11 @@ audio_test()
             }
             else
             {
-                /* wait sur (status & BCM2835_FULL1) : =0 => pas plein ; !=0 => plein */
-                sys_yield();
+                /* on passe la main en attendant que (status & BCM2835_FULL1)=0 => pas plein
+                 (!=0 => plein) */
+                sys_wait(PROCESS_DETAILS_WAITING_PWM_FIFO);
             }
-              
+
             if ((status & ERRORMASK))
             {
                 //                uart_print("error: ");
@@ -112,12 +113,11 @@ audio_test()
 void
 audio_config()
 {
-    while(1)
+    for(;;)
     {
-        pause(1000); // simulation d'attente entre 2 config
-        // increment = (increment) % 2 + 1;
+        sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
+        increment = (increment) % 2 + 1;
         // volume = (volume)%2 + 1;
-        sys_yield(); // wait à implémenter
     }
 }
 

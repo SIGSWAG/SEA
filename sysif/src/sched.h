@@ -12,6 +12,9 @@
 
 #define PROCESS_DETAILS_NONE 0
 #define PROCESS_DETAILS_WAITING_SERIAL 1
+#define PROCESS_DETAILS_WAITING_PWM_FIFO 2
+#define PROCESS_DETAILS_WAITING_1_SECOND 3
+
 
 typedef int (func_t) (void);
 
@@ -24,8 +27,9 @@ struct pcb_s {
 	uint32_t lr_user;
 	uint32_t cpsr;
 	int status;
-	int returnCode;
+	int return_code;
 	int status_details;
+	uint64_t date_veille;
 
 	func_t * entry;
 	struct pcb_s * next_pcb;

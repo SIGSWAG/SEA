@@ -1,6 +1,7 @@
 #include "sched.h"
 #include "kheap.h"
 #include "hw.h"
+#include "pwm.h"
 #include "asm_tools.h"
 
 #define SP_SIZE 10000
@@ -64,6 +65,24 @@ void update_process_list()
 				case PROCESS_DETAILS_WAITING_SERIAL:
 					//check serial flag
 					if ((Get32(UART_FR) & (1u << 4u)) == 0)
+					{
+						process->status_details = PROCESS_DETAILS_NONE;
+						process->status = PROCESS_WAITING;
+					}
+					break;
+				case PROCESS_DETAILS_WAITING_PWM_FIFO:
+				{
+					unsigned* pwm = (void*)PWM_BASE;
+					long status = *(pwm + BCM2835_PWM_STATUS);
+					if(!(status & BCM2835_FULL1))
+					{
+						process->status_details = PROCESS_DETAILS_NONE;
+						process->status = PROCESS_WAITING;
+					}
+					break;
+				}
+				case PROCESS_DETAILS_WAITING_1_SECOND:
+					if(process->date_veille + 10 <= get_date_ms())
 					{
 						process->status_details = PROCESS_DETAILS_NONE;
 						process->status = PROCESS_WAITING;
@@ -177,7 +196,7 @@ int sys_exit(int status)
 void do_sys_exit(uint32_t * sp_param_base)
 {	
 	//récupération du statut
-	current_process->returnCode = *(sp_param_base + 1);
+	current_process->return_code = *(sp_param_base + 1);
 	current_process->status = PROCESS_TERMINATED;
 	// Changement de process
 	elect();
@@ -277,6 +296,7 @@ void do_sys_wait(uint32_t * sp_param_base)
 	current_process->status = PROCESS_SLEEPING;
 	// r1 passé en paramètre
 	current_process->status_details = current_process->regs[1];
+	current_process->date_veille = get_date_ms();
 
 	//changement de proccess
 	elect();
