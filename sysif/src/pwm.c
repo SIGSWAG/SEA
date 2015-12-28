@@ -17,7 +17,7 @@ static int compteur_incrementation = 0;
 static unsigned int increment_div_1000 = 570; // contrôle la vitesse de lecture increment/1000 => astuce pour éviter les divisions 
 
 char* audio_data = &_binary_tune_wav_start;
-static char* audio_data_volumes[5];
+// static char* audio_data_volumes[5];
 static unsigned long long longueur_piste_audio;
 
 /*********************************************************************************************************
@@ -33,7 +33,7 @@ pause(int t) {
         }
     }
 }
-
+/*
 static uint64_t
 divise(uint64_t x, uint64_t y) {
     int quotient = 0;
@@ -98,7 +98,7 @@ cree_niveaux_volumes(void)
         audio_data_volumes[4][indice_dans_la_musique] = actu + divise( ((175 - max)*(actu - min) - (min - 80)*(max - actu)), (max - min) );
     }
 
-}
+}*/
 
 static void
 audio_init(void)
@@ -145,7 +145,7 @@ audio_init(void)
 
     pause(2);
 
-    cree_niveaux_volumes();
+    // cree_niveaux_volumes();
 }
 
 static int
