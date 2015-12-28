@@ -11,13 +11,12 @@ static volatile unsigned* gpio = (void*)GPIO_BASE;
 static volatile unsigned* clk = (void*)CLOCK_BASE;
 static volatile unsigned* pwm = (void*)PWM_BASE;
 
-// static unsigned long long increment = 1;
-static int volume = 1;
 static int compteur_incrementation = 0;
-static unsigned int increment_div_1000 = 570; // contrôle la vitesse de lecture increment/1000 => astuce pour éviter les divisions 
+static unsigned int increment_div_1000 = 1570; // contrôle la vitesse de lecture increment/1000 => astuce pour éviter les divisions 
+static unsigned int indice_volume = 0; // contrôle le volume (de 0 à 4) 
 
 char* audio_data = &_binary_tune_wav_start;
-// static char* audio_data_volumes[5];
+static char* audio_data_volumes[NOMBRE_DE_NIVEAUX_VOLUME];
 static unsigned long long longueur_piste_audio;
 
 /*********************************************************************************************************
@@ -33,22 +32,33 @@ pause(int t) {
         }
     }
 }
-/*
-static uint64_t
-divise(uint64_t x, uint64_t y) {
+
+static int
+divise(int x, int y) {
     int quotient = 0;
+    int coef = 1;
+    if(x < 0)
+    {
+        x = -x;
+        coef *= -1;
+    }
+    if(y < 0)
+    {
+        y = -y;
+        coef *= -1;
+    }
     while (x >= y) {
-        x  -=  y;
+        x -= y;
         quotient++;
     }
-    return quotient;
+    return quotient * coef;
 }
 
 static uint8_t
 get_min_uint8(char* data)
 {
     uint8_t res = 255;
-    int i = 0;
+    unsigned long long i = 0;
     for (; i < longueur_piste_audio; ++i)
     {
         if(data[i] < res)
@@ -63,7 +73,7 @@ static uint8_t
 get_max_uint8(char* data)
 {
     uint8_t res = 0;
-    int i = 0;
+    unsigned long long i = 0;
     for (; i < longueur_piste_audio; ++i)
     {
         if(data[i] > res)
@@ -79,26 +89,25 @@ cree_niveaux_volumes(void)
 {
     // note : 0x80=128 = volume 0
     int i = 0;
-    for(; i<5 ; i++)
+    for(; i<NOMBRE_DE_NIVEAUX_VOLUME ; i++)
     {
         audio_data_volumes[i] = (char*) kAlloc(sizeof(char) * longueur_piste_audio);
     }
     
     uint8_t max = get_max_uint8(audio_data); 
-    uint8_t min = get_min_uint8(audio_data); 
-
-    int indice_dans_la_musique = 0;
+    uint8_t min = get_min_uint8(audio_data);
+    unsigned long long indice_dans_la_musique = 0;
     for(; indice_dans_la_musique < longueur_piste_audio ; indice_dans_la_musique++)
     {
         uint8_t actu = audio_data[indice_dans_la_musique];
-        audio_data_volumes[0][indice_dans_la_musique] = actu + divise( ((255 - max)*(actu - min) - (min - 0)*(max - actu)), (max - min) );
-        audio_data_volumes[1][indice_dans_la_musique] = actu + divise( ((235 - max)*(actu - min) - (min - 20)*(max - actu)), (max - min) );
-        audio_data_volumes[2][indice_dans_la_musique] = actu + divise( ((215 - max)*(actu - min) - (min - 40)*(max - actu)), (max - min) );
-        audio_data_volumes[3][indice_dans_la_musique] = actu + divise( ((195 - max)*(actu - min) - (min - 60)*(max - actu)), (max - min) );
-        audio_data_volumes[4][indice_dans_la_musique] = actu + divise( ((175 - max)*(actu - min) - (min - 80)*(max - actu)), (max - min) );
+        uint8_t incr = (uint8_t)divise(110, NOMBRE_DE_NIVEAUX_VOLUME);
+        for(i=0 ; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
+        {        
+            audio_data_volumes[i][indice_dans_la_musique] = actu + (uint8_t)divise( ((255 - incr*i - max)*(actu - min) - (min - incr*i)*(max - actu)), (max - min) );
+        }
     }
 
-}*/
+}
 
 static void
 audio_init(void)
@@ -145,7 +154,7 @@ audio_init(void)
 
     pause(2);
 
-    // cree_niveaux_volumes();
+    cree_niveaux_volumes();
 }
 
 static int
@@ -174,6 +183,7 @@ lance_audio(void)
 
     for(;;)
     {
+        // led_blink();
         i=0;
         while (i < longueur_piste_audio)
         {
@@ -181,10 +191,8 @@ lance_audio(void)
             status =  *(pwm + BCM2835_PWM_STATUS);
             if (!(status & BCM2835_FULL1))
             {
-                *(pwm+BCM2835_PWM_FIFO) = (char)(audio_data[(unsigned long long)i] * volume);
-                // A tester !
-                // *(pwm+BCM2835_PWM_FIFO) = (char)(audio_data_volumes[0][(unsigned long long)i]); 
-                i += get_incr(); // à tester
+                *(pwm+BCM2835_PWM_FIFO) = (char)(audio_data_volumes[indice_volume][(unsigned long long)i]);
+                i += get_incr();
             }
             else
             {
@@ -214,16 +222,16 @@ configuration_audio(void)
         // simulation attente utilisateur
         sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
         // simulation gestion vitesse de lecture
-        if(increment_div_1000 == 570)
+        /* if(increment_div_1000 == 570)
         {
             increment_div_1000 = 1570;
         }
         else
         {
             increment_div_1000 = 570;
-        }
+        }*/
         // simulation changement de volume
-        // volume = (volume)%2 + 1;
+        indice_volume = (indice_volume + 1) % NOMBRE_DE_NIVEAUX_VOLUME;
     }
 }
 
