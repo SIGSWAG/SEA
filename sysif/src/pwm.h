@@ -1,7 +1,7 @@
 #ifndef PWM_H
 #define PWM_H
 
-void audio_test();
-void audio_config();
+void lance_audio(void);
+void configuration_audio(void);
 
 #endif

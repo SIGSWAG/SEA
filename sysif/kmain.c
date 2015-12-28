@@ -8,14 +8,13 @@
 void
 play_music()
 {
-//	audio_config();
-	audio_test();
+	lance_audio();
 }
 
 void
 config_music()
 {
-	audio_config();
+	configuration_audio();
 }
 
 void
@@ -29,8 +28,10 @@ kmain(void)
 	create_process((func_t*) &config_music);
 	
 	// Activation des interruptions
-	// timer_init();
-	// ENABLE_IRQ();
+#ifdef IRQS_ACTIVEES
+		timer_init();
+		ENABLE_IRQ();		
+#endif
 	
 	__asm("cps 0x10"); // switch CPU to USER mode
 

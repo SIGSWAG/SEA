@@ -74,7 +74,7 @@ void update_process_list()
 				{
 					unsigned* pwm = (void*)PWM_BASE;
 					long status = *(pwm + BCM2835_PWM_STATUS);
-					if(!(status & BCM2835_FULL1))
+					if(!(status & BCM2835_FULL1)) // si la fifo de la musique n'est plus pleine
 					{
 						process->status_details = PROCESS_DETAILS_NONE;
 						process->status = PROCESS_WAITING;
@@ -82,7 +82,7 @@ void update_process_list()
 					break;
 				}
 				case PROCESS_DETAILS_WAITING_1_SECOND:
-					if(process->date_veille + 10 <= get_date_ms())
+					if(process->date_veille + 10 <= get_date_ms()) // ~1.5s bizarre pour des ms..
 					{
 						process->status_details = PROCESS_DETAILS_NONE;
 						process->status = PROCESS_WAITING;
@@ -317,4 +317,10 @@ void do_sys_wait(uint32_t * sp_param_base)
 	}
 	// Restitution du LR_SVC
 	*(sp_param_base + 13) = current_process->lr_svc;
+
+#ifdef IRQS_ACTIVEES
+	set_next_tick_default();
+	ENABLE_TIMER_IRQ();
+	ENABLE_IRQ();		
+#endif
 }

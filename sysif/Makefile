@@ -2,7 +2,7 @@
 # 4IF SEA "SysIF" Makefile
 #############################################################################
 
-default:kernel_for_qemu
+default: kernel_for_qemu
 
 all: kernel_for_qemu kernel_for_sdcard
 
@@ -19,7 +19,7 @@ CFLAGS=-Wall -Werror -nostdlib -nostartfiles -ffreestanding -std=c99 -g -fomit-f
 COMMON_FLAGS=-mcpu=arm1176jzf-s
 
 # Object files (excluding kmain)
-OBJECTS=$(addsuffix .o,  $(addprefix build/, $(basename $(notdir $(wildcard src/*.[cs]))))) tune.o
+OBJECTS=$(addsuffix .o,  $(addprefix build/, $(basename $(notdir $(wildcard src/*.[cs]))))) music/tune.o
 
 # non-default usage: "make KMAIN=test/my-kmain.c" 
 KMAIN ?= ./kmain.c
@@ -67,11 +67,12 @@ build/kernel.img: build/kernel.elf
 build/kernel.list: build/kernel.elf
 	arm-none-eabi-objdump -d -j .text -j .bss -j .stack -j .kernel_heap -j .user_stacks -j .data $< > $@
 
-tune.o: tune.wav
+# python dump_music_separated.py -o $@ -f "$^"
+music/tune.o: music/tune.wav
 	arm-none-eabi-ld -s -r -o $@ -b binary $^
-	@echo "coucou"
-
+	
 # nettoyage: effacer tous les fichiers générés
 .PHONY:clean
 clean:
 	rm -rf build
+	rm -f tune.o
