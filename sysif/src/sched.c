@@ -88,6 +88,14 @@ void update_process_list()
 						process->status = PROCESS_WAITING;
 					}
 					break;
+
+				case PROCESS_DETAILS_MUSIC_PAUSE:
+					if(musique_est_prete() == 0 || musique_est_arretee() == 0)
+					{
+						process->status_details = PROCESS_DETAILS_NONE;
+						process->status = PROCESS_WAITING;
+					}
+					break;
 				default:
 					break;
 			}

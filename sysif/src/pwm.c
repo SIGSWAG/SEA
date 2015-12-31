@@ -5,8 +5,10 @@
 
 extern char _binary_tune_wav_start;
 extern char _binary_tune_wav_end;
-
-
+/*
+static char* array_binary_music_wav_start = {_binary_tune_wav_start};
+static char* array_binary_music_wav_end = {_binary_tune_wav_end};
+*/
 static volatile unsigned* gpio = (void*)GPIO_BASE;
 static volatile unsigned* clk = (void*)CLOCK_BASE;
 static volatile unsigned* pwm = (void*)PWM_BASE;
@@ -14,6 +16,10 @@ static volatile unsigned* pwm = (void*)PWM_BASE;
 static int compteur_incrementation = 0;
 static unsigned int increment_div_1000 = 1570; // contrôle la vitesse de lecture increment/1000 => astuce pour éviter les divisions 
 static unsigned int indice_volume = 0; // contrôle le volume (de 0 à 4) 
+
+static unsigned long long position_lecture_musique = 0;
+static unsigned int musique_arretee = 0;
+static unsigned int musique_prete = 0;
 
 char* audio_data = &_binary_tune_wav_start;
 static char* audio_data_volumes[NOMBRE_DE_NIVEAUX_VOLUME];
@@ -23,7 +29,7 @@ static unsigned long long longueur_piste_audio;
 Méthodes statiques
 *********************************************************************************************************/
 static void
-pause(int t) {
+pause_physique(int t) {
     // Pause for about t ms
     int i;
     for (;t>0;t--) {
@@ -127,18 +133,18 @@ audio_init(void)
 
     SET_GPIO_ALT(40, 0);
     SET_GPIO_ALT(45, 0);
-    pause(2);
+    pause_physique(2);
 
     *(clk + BCM2835_PWMCLK_CNTL) = PM_PASSWORD | (1 << 5);    // stop clock
     *(clk + BCM2835_PWMCLK_DIV)  = PM_PASSWORD | (idiv<<12);  // set divisor
     *(clk + BCM2835_PWMCLK_CNTL) = PM_PASSWORD | 16 | 1;      // enable + oscillator (raspbian has this as plla)
 
-    pause(2); 
+    pause_physique(2); 
 
     // disable PWM
     *(pwm + BCM2835_PWM_CONTROL) = 0;
        
-    pause(2);
+    pause_physique(2);
 
     *(pwm+BCM2835_PWM0_RANGE) = range;
     *(pwm+BCM2835_PWM1_RANGE) = range;
@@ -152,7 +158,7 @@ audio_init(void)
     1<<6                 | // clear FIFO
     BCM2835_PWM0_ENABLE;   // enable channel 0
 
-    pause(2);
+    pause_physique(2);
 
     cree_niveaux_volumes();
 }
@@ -177,22 +183,28 @@ Méthodes publiques
 void
 lance_audio(void)
 {
-    unsigned long long i=0;
     long status;
     audio_init();
+    musique_prete = 1;
 
     for(;;)
     {
         // led_blink();
-        i=0;
-        while (i < longueur_piste_audio)
+        position_lecture_musique = 0;
+        while (position_lecture_musique < longueur_piste_audio)
         {
-            
+            // gestion de la pause et de l'arrêt
+            if(musique_arretee)
+            {
+                sys_wait(PROCESS_DETAILS_MUSIC_PAUSE);
+            }
+
+            // gestion des erreurs (du status actuel de la fifo de son)
             status =  *(pwm + BCM2835_PWM_STATUS);
             if (!(status & BCM2835_FULL1))
             {
-                *(pwm+BCM2835_PWM_FIFO) = (char)(audio_data_volumes[indice_volume][(unsigned long long)i]);
-                i += get_incr();
+                *(pwm+BCM2835_PWM_FIFO) = (char)(audio_data_volumes[indice_volume][(unsigned long long)position_lecture_musique]);
+                position_lecture_musique += get_incr();
             }
             else
             {
@@ -212,26 +224,119 @@ lance_audio(void)
     }
 }
 
+void
+musique_pause(void)
+{
+    musique_arretee = 1;
+}
 
+void
+musique_lecture(void)
+{
+    musique_arretee = 0;
+}
+
+void
+musique_stop(void)
+{
+    musique_arretee = 1;
+    position_lecture_musique = 0;
+}
+
+unsigned int
+musique_est_arretee(void)
+{
+    return musique_arretee;
+}
+
+unsigned int
+musique_est_prete(void)
+{
+    return musique_prete;
+}
+
+void
+set_increment_musique(int increment)
+{
+    increment_div_1000 = increment;
+}
+
+void
+set_volume(int volume)
+{
+    if(volume >= 0 && volume < NOMBRE_DE_NIVEAUX_VOLUME)
+    {
+        indice_volume = volume;
+    }
+}
+
+void
+augmenter_volume(void)
+{
+    if(indice_volume > 0)
+    {
+        indice_volume--;
+    }
+}
+
+void
+diminuer_volume(void)
+{
+    if(indice_volume < NOMBRE_DE_NIVEAUX_VOLUME - 1 )
+    {
+        indice_volume++;
+    }
+}
 
 void
 configuration_audio(void)
 {
+    int cpt = 0;
     for(;;)
     {
+
+        // simulation pause
+        /*
         // simulation attente utilisateur
         sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
+        if(musique_est_prete() == 1)
+        {
+            musique_pause();
+            sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
+            musique_lecture();            
+        }
+        */
+
         // simulation gestion vitesse de lecture
-        /* if(increment_div_1000 == 570)
+        /* 
+        // simulation attente utilisateur
+        sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
+        if(increment_div_1000 == 570)
         {
             increment_div_1000 = 1570;
         }
         else
         {
             increment_div_1000 = 570;
-        }*/
+        }
+        */
+        
         // simulation changement de volume
         indice_volume = (indice_volume + 1) % NOMBRE_DE_NIVEAUX_VOLUME;
+
+        // simulation de stop
+        cpt++;
+        sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
+        if(cpt > 2)
+        {
+            cpt = 0;
+            if(musique_est_prete() == 1)
+            {
+                musique_stop();
+                sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
+                musique_lecture();                
+            }
+        }
     }
 }
 

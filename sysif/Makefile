@@ -19,7 +19,7 @@ CFLAGS=-Wall -Werror -nostdlib -nostartfiles -ffreestanding -std=c99 -g -fomit-f
 COMMON_FLAGS=-mcpu=arm1176jzf-s
 
 # Object files (excluding kmain)
-OBJECTS=$(addsuffix .o,  $(addprefix build/, $(basename $(notdir $(wildcard src/*.[cs]))))) music/tune.o
+OBJECTS=$(addsuffix .o,  $(addprefix build/, $(basename $(notdir $(wildcard src/*.[cs]))))) tune.o
 
 # non-default usage: "make KMAIN=test/my-kmain.c" 
 KMAIN ?= ./kmain.c
@@ -68,9 +68,9 @@ build/kernel.list: build/kernel.elf
 	arm-none-eabi-objdump -d -j .text -j .bss -j .stack -j .kernel_heap -j .user_stacks -j .data $< > $@
 
 # python dump_music_separated.py -o $@ -f "$^"
-music/tune.o: music/tune.wav
+tune.o: tune.wav
 	arm-none-eabi-ld -s -r -o $@ -b binary $^
-	
+
 # nettoyage: effacer tous les fichiers générés
 .PHONY:clean
 clean:
