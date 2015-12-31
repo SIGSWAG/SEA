@@ -3,6 +3,10 @@
 #include "sched.h"
 #include "uart.h"
 #include "syscall.h"
+#include "free_list_utils.h"
+
+#define DEBUG 1
+
 
 #define BEGIN_IO_MAPPED_MEM 0x20000000
 #define END_IO_MAPPED_MEM 0x20FFFFFF
@@ -204,8 +208,10 @@ unsigned int * init_table_page()
             /** Pour chaque entrée dans cette table **/
             for(unsigned int j = 0; j < SECON_LVL_TT_COUNT; j++){
 
-                if( 1>3 && (i<<10|j) >= kernel_heap_begin){ //la page est au dela du début du heap, faute de traduction WARNING DEBUG
-                    table2[j]=0x0;
+                if( 1>3 && (i<<10|j) >= kernel_heap_begin && !DEBUG){ //la page est au dela du début du heap, faute de traduction WARNING DEBUG
+
+                        table2[j]=0x0;
+
                 }else{
                     /** concat i|j|champ de bits **/
                     table2[j] = (i<<20) | (j<<12) | TABLE_2_BITSET;
@@ -259,6 +265,20 @@ void free_process_memory(struct pcb_s* process){
 
 
     }
+
+
+    //libération de la free list;
+    struct block* current_block = process->first_empty_block;
+    while(current_process!=0){
+
+        struct block* tampon = current_block;
+        current_block = current_block->next;
+        kFree((uint8_t*)tampon, sizeof(struct block));
+
+
+    }
+
+
 
     kFree((uint8_t*)table1, FIRST_LVL_TT_SIZE);
 
@@ -587,7 +607,7 @@ void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages)
 
             }
 
-             kFree((void *)current_block, sizeof(struct block));//libération du tableau
+            kFree((void *)current_block, sizeof(struct block));//libération du tableau
 
         }else{
             current_block->first_page = (int*) ((unsigned int)(current_block->first_page) + PAGE_SIZE);
@@ -599,7 +619,7 @@ void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages)
 
 
 
-    kFree((void *)addresses, sizeof(int)*nbPages);//libération du tableau
+   // kFree((void *)addresses, sizeof(int)*nbPages);//libération du tableau
     return retour;
 
 }
@@ -709,7 +729,7 @@ void vmem_desalloc_for_userland_single(struct pcb_s* process, void* page)
         }
     }else{//on était au dernier block, insertion après le dernier bloc
 
-        unsigned int lastPage = (unsigned int) precedingBlock->first_page + currentBlock->previous->block_size * PAGE_SIZE;//premiere page apres le  dernier bloc
+        unsigned int lastPage = (unsigned int) precedingBlock->first_page + precedingBlock->block_size * PAGE_SIZE;//premiere page apres le  dernier bloc
 
         if(lastPage ==  ((unsigned int)(pageToFree))){ //insertion après le bloc précédent CAS 6
             precedingBlock->block_size++;
@@ -827,7 +847,99 @@ uint32_t vmem_translate(uint32_t va, struct pcb_s* process)
 
 }
 
+void* do_gmalloc(struct pcb_s* process, int size){
 
+    void * retour = 0x0;
+    if(process->first_empty_block_heap == 0){
+        //first allocation
+        int nbPages = size / PAGE_SIZE + 1;
+
+
+        //Allocation du bloc
+        struct block * block = (struct block *) kAlloc(sizeof(struct block));
+        block->block_size = 1337;
+
+
+        void * first_byte = vmem_alloc_for_userland(process, nbPages); //on alloue assez de pages pour le processus.
+
+
+        free_pages(nbPages*PAGE_SIZE, first_byte, &process->first_empty_block_heap, 1);
+
+        retour = allocate_pages(size, &process->first_empty_block_heap, 1);
+
+    }else{
+
+        void * first_byte =  allocate_pages(size, &process->first_empty_block_heap, 1); //on alloue assez de pages pour le processus.
+
+        if(first_byte == 0x0){//pas assez de place, on réalloue
+
+            int nbPages = size / PAGE_SIZE + 1;
+
+            void * first_page = vmem_alloc_for_userland(process, nbPages); //on alloue assez de pages
+
+
+            free_pages(size, first_page, &process->first_empty_block_heap, 1);
+
+            retour = allocate_pages(size, &process->first_empty_block_heap, 1);
+            //on parcourt la free_list pour insérer au bon endroit
+
+        }else{
+
+            retour =  first_byte;
+
+        }
+
+
+
+
+    }
+    return retour;
+
+
+}
+
+
+
+void do_gfree(struct pcb_s* process, void* pointer, int size){
+
+
+    free_pages(size, pointer, &process->first_empty_block_heap, 1);
+
+
+    //on cherche ensuite les pages en question, pour la libérer éventuellement
+    int nbPages = size/PAGE_SIZE+1;
+
+
+    for(int i=0; i<nbPages; i++){ //pour chaque page, on vérifie si on ne peut pas la désallouer
+
+        int pageAddress = (((int)(pointer)>>20)<<20) + i*PAGE_SIZE;
+
+        int found = 0;
+        struct block* block = process->first_empty_block_heap;
+        while(found == 0 && block != 0x0 && pageAddress <= (((int)(block->first_page)>>20)<<20)){
+
+            if(pageAddress == ((int)(block->first_page)/ PAGE_SIZE)){
+                found = 1;
+            }
+            block = block->next;
+
+        }
+
+        if(found==0){ //on peut désallouer la page, rien ne pointe dessus
+
+
+
+            //vmem_desalloc_for_userland_single(process, (void*)pageAddress);
+
+        }
+    }
+
+
+
+
+
+
+}
 
 
 

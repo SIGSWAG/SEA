@@ -33,6 +33,7 @@ struct pcb_s {
     func_t * entry;
     struct pcb_s * next_pcb;
     struct block* first_empty_block;
+    struct block* first_empty_block_heap;
 };
 
 

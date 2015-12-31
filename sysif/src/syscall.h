@@ -30,4 +30,13 @@ void do_sys_mmap(uint32_t * sp_param);
 void sys_munmap(void* pointer, int nbPages);
 
 void do_sys_munmap(uint32_t * sp_param);
+
+void do_sys_gmalloc(uint32_t * sp_param);
+
+void do_sys_gfree(uint32_t * sp_param);
+
+void* gmalloc(int nbBytes);
+
+void gfree(void* pointer, int nbBytes);
+
 #endif

@@ -98,6 +98,12 @@ void __attribute__((naked)) swi_handler() {
     case 9:
         do_sys_munmap(sp_param_base);
         break;
+    case 10 :
+        do_sys_gmalloc(sp_param_base);
+        break;
+    case 11 :
+        do_sys_gfree(sp_param_base);
+        break;
     default :
         PANIC();
     }
@@ -200,6 +206,27 @@ void* sys_mmap(int nbPages)
     return (void*) sp_param_base[0];
 }
 
+void* gmalloc(int nbBytes)
+{
+    __asm("mov r0, #10");
+    __asm("mov r1, %0" : : "r"(nbBytes));
+    __asm("SWI #0");
+
+
+    return (void*) sp_param_base[0];
+}
+
+
+
+void do_sys_gmalloc(uint32_t * sp_param){
+
+    void* ret = do_gmalloc(current_process, (int)sp_param[1]);
+    sp_param[0] = (uint32_t) ret;
+
+}
+
+
+
 void do_sys_mmap(uint32_t * sp_param){
 
     void* ret = vmem_alloc_for_userland(current_process, (int)sp_param[1]);
@@ -213,6 +240,26 @@ void sys_munmap(void* pointer, int nbPages){
     __asm("mov r1, %0" : : "r"(pointer));
     __asm("mov r2, %0" : : "r"(nbPages));
     __asm("SWI #0");
+
+
+}
+
+void gfree(void* pointer, int nbBytes){
+
+    __asm("mov r0, #11");
+    __asm("mov r1, %0" : : "r"(pointer));
+    __asm("mov r2, %0" : : "r"(nbBytes));
+    __asm("SWI #0");
+
+
+}
+
+void do_sys_gfree(uint32_t * sp_param){
+
+
+    void * pointer = (void*) sp_param[1];
+    int nbBytes = (int)sp_param[2];
+    do_gfree(current_process, pointer, nbBytes);
 
 
 }

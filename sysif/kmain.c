@@ -38,18 +38,15 @@ void user_process3()
 	//int * pt = (int *) 0x1100001;
 	//*pt = 12;
 	
-    int* alloc = (int*) sys_mmap(2);
+    int* alloc = (int*) gmalloc(sizeof(int)*4);
+    int* alloc2 = (int*) gmalloc(sizeof(int)*4);
     alloc[0] = 1337;
-    int * alloc2 = (int*) sys_mmap(1);
-    int * alloc3 = (int*) sys_mmap(1);
-    int * alloc4 = (int*) sys_mmap(2);
-    alloc4[0]=339;
-    alloc3[0]=5;
     alloc2[0] = 12345;
 
 
-    sys_munmap((void*)alloc2, 1);
-    sys_munmap((void*)alloc4, 2);
+    gfree((void*)alloc,sizeof(int)*4);
+    alloc = (int*) gmalloc(4096);
+
 
     int v3 = 0;
     while( 1 ) {
