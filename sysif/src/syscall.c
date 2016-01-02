@@ -244,11 +244,10 @@ void sys_munmap(void* pointer, int nbPages){
 
 }
 
-void gfree(void* pointer, int nbBytes){
+void gfree(void* pointer){
 
     __asm("mov r0, #11");
     __asm("mov r1, %0" : : "r"(pointer));
-    __asm("mov r2, %0" : : "r"(nbBytes));
     __asm("SWI #0");
 
 
@@ -258,8 +257,7 @@ void do_sys_gfree(uint32_t * sp_param){
 
 
     void * pointer = (void*) sp_param[1];
-    int nbBytes = (int)sp_param[2];
-    do_gfree(current_process, pointer, nbBytes);
+    do_gfree(current_process, pointer);
 
 
 }

@@ -44,7 +44,7 @@ void user_process3()
     alloc2[0] = 12345;
 
 
-    gfree((void*)alloc,sizeof(int)*4);
+    gfree((void*)alloc);
     alloc = (int*) gmalloc(4096);
 
 

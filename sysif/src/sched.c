@@ -69,6 +69,21 @@ void create_process(func_t* entry)
     uint32_t * sp_zone = (uint32_t *) allocate_stack_for_process(pcb, 3);//(uint32_t *) kAlloc(SP_SIZE);
     pcb->sp = (uint32_t) sp_zone; //+ SP_SIZE;
 
+
+    pcb->allocated_adresses = (int**) kAlloc(sizeof(int)*100);
+
+    for(int i=0; i<100;i++){
+
+
+
+        pcb->allocated_adresses[i]= (int*) kAlloc(sizeof(int)*2);
+
+        pcb->allocated_adresses[i][0] = 0;
+    }
+    pcb->allocated_adresses_size = 100;
+
+
+
     //on reset la page des tables du processus courant
     invalidate_TLB();
     configure_mmu_kernel();

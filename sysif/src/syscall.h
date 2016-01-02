@@ -37,6 +37,6 @@ void do_sys_gfree(uint32_t * sp_param);
 
 void* gmalloc(int nbBytes);
 
-void gfree(void* pointer, int nbBytes);
+void gfree(void* pointer);
 
 #endif

@@ -91,7 +91,7 @@ void* allocate_stack_for_process(struct pcb_s* process, int nbPages);
 
 void* do_gmalloc(struct pcb_s* process, int size);
 
-void do_gfree(struct pcb_s* process, void* pointer, int size);
+void do_gfree(struct pcb_s* process, void* pointer);
 
 #endif
 

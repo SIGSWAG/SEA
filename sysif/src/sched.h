@@ -21,6 +21,7 @@ struct block {
 
 
 };
+
 struct pcb_s {
     uint32_t regs[13];
     uint32_t sp;
@@ -34,6 +35,8 @@ struct pcb_s {
     struct pcb_s * next_pcb;
     struct block* first_empty_block;
     struct block* first_empty_block_heap;
+    int** allocated_adresses;
+    int allocated_adresses_size;
 };
 
 

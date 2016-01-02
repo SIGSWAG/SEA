@@ -893,6 +893,21 @@ void* do_gmalloc(struct pcb_s* process, int size){
 
 
     }
+
+    int found = 0;
+    int i =0;
+    while(i<process->allocated_adresses_size && found == 0){
+
+        if(process->allocated_adresses[i][0]== 0){
+            process->allocated_adresses[i][0] = (int)retour;
+            process->allocated_adresses[i][1] = size;
+            found = 1;
+        }
+        i++;
+
+    }
+
+
     return retour;
 
 
@@ -900,7 +915,7 @@ void* do_gmalloc(struct pcb_s* process, int size){
 
 
 
-void do_gfree(struct pcb_s* process, void* pointer, int size){
+void do_gfree_sized(struct pcb_s* process, void* pointer, int size){
 
 
     free_pages(size, pointer, &process->first_empty_block_heap, 1);
@@ -935,6 +950,28 @@ void do_gfree(struct pcb_s* process, void* pointer, int size){
     }
 
 
+}
+
+void do_gfree(struct pcb_s* process, void* pointer){
+
+    int found = 0;
+    int i =0;
+    int size = 0;
+    while(i<process->allocated_adresses_size && found == 0){
+
+        if(process->allocated_adresses[i][0] == (int)pointer){
+            size = process->allocated_adresses[i][1];
+            process->allocated_adresses[i][0] = 0;
+            found = 1;
+        }
+        i++;
+
+    }
+
+    if(found == 1){
+
+        do_gfree_sized(process, pointer, size);
+    }
 
 
 
