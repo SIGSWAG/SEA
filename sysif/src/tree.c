@@ -1,15 +1,6 @@
 #include "tree.h"
 #include "kheap.h"
-#include "sched.h"
 
-struct node {
-    int key;
-    struct node* left;
-    struct node* right;
-    struct node* parent;
-    int color;
-    struct pcb_s process;
-};
 
 node* tree_minimum(node* nil, node* x){
     node * n = x;
@@ -398,7 +389,7 @@ void delete_in_tree(tree* t, int key){
 
 }
 
-void insert_in_tree(tree* t,int key){
+void insert_in_tree(tree* t,int key, struct pcb_s* proc){
 
     node* n = (node *) kAlloc(sizeof(node));
     n->color=RED;
@@ -406,6 +397,7 @@ void insert_in_tree(tree* t,int key){
     n->left=t->nil;
     n->right=t->nil;
     n->parent=t->nil;
+    n->process=proc;
 
     insert(t, n);
 }

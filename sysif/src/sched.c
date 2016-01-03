@@ -1,5 +1,6 @@
 #include "sched.h"
 #include "kheap.h"
+#include "tree.h"
 #include "hw.h"
 
 #define SP_SIZE 10000
@@ -9,13 +10,28 @@ struct pcb_s kmain_process;
 uint32_t lr_user;
 uint32_t sp_user;
 
+tree cfs_tree;
+
 
 void sched_init()
 {
+
+	//Init a tree, with its nil node
+	
+	
+	node* nil = (node*) kAlloc(sizeof(node));
+	nil->color=BLACK;
+	nil->left = nil;
+	nil->right = nil;
+	nil->parent = nil;
+	cfs_tree.nil = nil;
+	cfs_tree.root = nil;
+	nil->key = -1;
+    
 	// initialisation du process kmain
-	kmain_process.next_pcb = &kmain_process;
 	kmain_process.status = PROCESS_RUNNING;
 	current_process = &kmain_process;
+	insert_in_tree(&cfs_tree, 0, &kmain_process);
 
 	kheap_init();
 }

@@ -23,6 +23,7 @@ struct pcb_s {
 	int returnCode;
 
 	func_t * entry;
+	// A enlever
 	struct pcb_s * next_pcb;
 };
 

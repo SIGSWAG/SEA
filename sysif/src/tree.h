@@ -1,9 +1,19 @@
-#include <stdio.h>
-#include <stdint.h>
+#ifndef TREE_H
+#define TREE_H
+
+#include "sched.h"
+
 #define RED 1
 #define BLACK 0
 
-struct node;
+struct node {
+    int key;
+    struct node* left;
+    struct node* right;
+    struct node* parent;
+    int color;
+    struct pcb_s* process;
+};
 
 typedef struct node node;
 
@@ -46,6 +56,6 @@ void rb_delete(tree* T, node* z);
 
 void delete_in_tree(tree* t, int key);
 
-void insert_in_tree(tree* t,int key);
+void insert_in_tree(tree* t, int key, struct pcb_s* proc);
 
-
+#endif
