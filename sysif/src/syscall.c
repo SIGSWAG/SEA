@@ -8,6 +8,7 @@ static uint32_t * sp_param_base;
 static uint32_t lr_irq;
 
 void __attribute__((naked)) irq_handler() {
+
 	__asm("mov %0, lr" : "=r"(lr_irq));
 	
 	// Switch to SVC

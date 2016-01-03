@@ -397,7 +397,7 @@ void insert_in_tree(tree* t,int key, struct pcb_s* proc){
     n->left=t->nil;
     n->right=t->nil;
     n->parent=t->nil;
-    n->process=proc;
+    n->process=proc; 
 
     insert(t, n);
 }

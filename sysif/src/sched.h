@@ -23,8 +23,13 @@ struct pcb_s {
 	int returnCode;
 
 	func_t * entry;
+	
+	//pour le CFS
+	uint64_t execution_time;
+	uint64_t arrival_time;
+	
 	// A enlever
-	struct pcb_s * next_pcb;
+	//struct pcb_s * next_pcb;
 };
 
 void create_process(func_t* entry);
