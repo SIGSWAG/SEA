@@ -1,15 +1,9 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdint.h>
 #define RED 1
 #define BLACK 0
 
-struct node {
-    int key;
-    struct node* left;
-    struct node* right;
-    struct node* parent;
-    int color;
-};
+struct node;
 
 typedef struct node node;
 

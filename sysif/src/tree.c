@@ -1,6 +1,15 @@
 #include "tree.h"
+#include "kheap.h"
+#include "sched.h"
 
-
+struct node {
+    int key;
+    struct node* left;
+    struct node* right;
+    struct node* parent;
+    int color;
+    struct pcb_s process;
+};
 
 node* tree_minimum(node* nil, node* x){
     node * n = x;
@@ -184,7 +193,7 @@ void rb_insert_correction(tree* T, node* z){
 
 void infixe(node* nil, node* x){
     if(x!=nil){
-        printf(" %d (%d) sons : %d (%d), %d (%d)",x->key,x->color, x->left->key, x->left->color, x->right->key, x->right->color);
+        //printf(" %d (%d) sons : %d (%d), %d (%d)",x->key,x->color, x->left->key, x->left->color, x->right->key, x->right->color);
         infixe(nil, x->left);
         infixe(nil, x->right);
     }
@@ -391,7 +400,7 @@ void delete_in_tree(tree* t, int key){
 
 void insert_in_tree(tree* t,int key){
 
-    node* n = malloc(sizeof(node));
+    node* n = (node *) kAlloc(sizeof(node));
     n->color=RED;
     n->key=key;
     n->left=t->nil;
