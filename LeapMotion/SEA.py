@@ -72,6 +72,9 @@ class LeapMotionForMusicListener(Leap.Listener):
         self._app_height = 400
         self._app_depth = 400
         self._detection_percentage = 0.5
+        self._temporisation = 1 * 1000000 # microseconds
+        self._last_messages = []
+        self._last_frame_timestamp = 0
 
     def on_init(self, controller):
         if not self._serial.isOpen():
@@ -127,8 +130,8 @@ class LeapMotionForMusicListener(Leap.Listener):
             direction = hand.direction
 
             diff_x = _outsideX(position_x)
-            diff_y = _outsideX(position_y)
-            diff_z = _outsideX(position_z)
+            diff_y = _outsideY(position_y)
+            diff_z = _outsideZ(position_z)
 
             if diff_x < 0:
                 messages.append(self.messages_code["left"])
@@ -160,11 +163,16 @@ class LeapMotionForMusicListener(Leap.Listener):
 
         if not (frame.hands.is_empty and frame.gestures().is_empty):
             print ""
-
+        
         if len(messages):
             for message in messages:
-                self._serial.write(message)
-
+                if message in self._last_messages: # if message was previously sent
+                    if (frame.timestamp - self._last_frame_timestamp) > self._temporisation: # if delay is more than tempo
+                        self._serial.write(message)
+                else:
+                    self._serial.write(message)
+        self._last_frame_timestamp = frame.timestamp
+        self._last_messages = messages
     
     def _outsideX(self, x):
         limit = self.detection_width / 2
