@@ -100,8 +100,8 @@ class LeapMotionForMusicListener(Leap.Listener):
         frame = controller.frame()
         messages = []
 
-        print "Frame id: %d, timestamp: %d, hands: %d, fingers: %d, tools: %d, gestures: %d" % (
-              frame.id, frame.timestamp, len(frame.hands), len(frame.fingers), len(frame.tools), len(frame.gestures()))
+        #print "Frame id: %d, timestamp: %d, hands: %d, fingers: %d, tools: %d, gestures: %d" % (
+        #    frame.id, frame.timestamp, len(frame.hands), len(frame.fingers), len(frame.tools), len(frame.gestures()))
 
         # Interaction box
         i_box = frame.interaction_box
@@ -115,8 +115,8 @@ class LeapMotionForMusicListener(Leap.Listener):
 
             handType = "Left hand" if hand.is_left else "Right hand"
 
-            print "  %s, id %d, position: %s" % (
-                handType, hand.id, hand.palm_position)
+            #print "  %s, id %d, position: %s" % (
+            #    handType, hand.id, hand.palm_position)
 
             normalized_palm_position = i_box.normalize_point(hand.palm_position)
             # Normalized position is between [0,1]
@@ -129,9 +129,9 @@ class LeapMotionForMusicListener(Leap.Listener):
             normal = hand.palm_normal
             direction = hand.direction
 
-            diff_x = _outsideX(position_x)
-            diff_y = _outsideY(position_y)
-            diff_z = _outsideZ(position_z)
+            diff_x = self._outsideX(position_x)
+            diff_y = self._outsideY(position_y)
+            diff_z = self._outsideZ(position_z)
 
             if diff_x < 0:
                 messages.append(self.messages_code["left"])
@@ -148,30 +148,31 @@ class LeapMotionForMusicListener(Leap.Listener):
             
 
             # Calculate the hand's pitch, roll, and yaw angles
-            print "  pitch: %f degrees, roll: %f degrees, yaw: %f degrees" % (
-                direction.pitch * Leap.RAD_TO_DEG,
-                normal.roll * Leap.RAD_TO_DEG,
-                direction.yaw * Leap.RAD_TO_DEG)
+            #print "  pitch: %f degrees, roll: %f degrees, yaw: %f degrees" % (
+            #    direction.pitch * Leap.RAD_TO_DEG,
+            #    normal.roll * Leap.RAD_TO_DEG,
+            #    direction.yaw * Leap.RAD_TO_DEG)
 
         # Get gestures
         for gesture in frame.gestures():
             if gesture.type == Leap.Gesture.TYPE_SWIPE:
                 swipe = SwipeGesture(gesture)
-                print "  Swipe id: %d, state: %s, position: %s, direction: %s, speed: %f" % (
-                        gesture.id, self.state_names[gesture.state],
-                        swipe.position, swipe.direction, swipe.speed)
+                #print "  Swipe id: %d, state: %s, position: %s, direction: %s, speed: %f" % (
+                #        gesture.id, self.state_names[gesture.state],
+                #        swipe.position, swipe.direction, swipe.speed)
 
         if not (frame.hands.is_empty and frame.gestures().is_empty):
-            print ""
-        
+            #print ""
+            pass
         if len(messages):
             for message in messages:
                 if message in self._last_messages: # if message was previously sent
                     if (frame.timestamp - self._last_frame_timestamp) > self._temporisation: # if delay is more than tempo
                         self._serial.write(message)
+                        self._last_frame_timestamp = frame.timestamp
                 else:
                     self._serial.write(message)
-        self._last_frame_timestamp = frame.timestamp
+                    self._last_frame_timestamp = frame.timestamp
         self._last_messages = messages
     
     def _outsideX(self, x):
