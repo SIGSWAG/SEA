@@ -44,6 +44,8 @@ kmain(void){
 	__asm("cps 0x10"); // switch CPU to USER mode
 	
 	while(1) {
-		sys_yield();
+		volatile int i;//sys_yield();
+		i=0;
+		i++;
 	}
 }

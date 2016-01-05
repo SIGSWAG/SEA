@@ -13,6 +13,7 @@ uint32_t sp_user;
 
 tree cfs_tree;
 uint64_t change_time;
+int nb_process = 0;
 
 void sched_init()
 {
@@ -31,11 +32,12 @@ void sched_init()
 	kmain_process.status = PROCESS_RUNNING;
 	current_process = &kmain_process;
 	
+	kmain_process.num=nb_process++;
 	kmain_process.execution_time=0;
 	insert_in_tree(&cfs_tree, 0, &kmain_process);
 
 	//initialisation de la date à 0
-	sys_settime(0);
+	sys_settime(900);
 
 	//initialisation du tas
 	kheap_init();
@@ -60,6 +62,7 @@ void create_process(func_t* entry)
 	pcb->status = PROCESS_CREATED;
 	
 	// On initialise le temps d'execution à 0 et on enregistre la date d'arrivée du processus
+	pcb->num=nb_process++;
 	pcb->execution_time=0;
 	pcb->arrival_time = sys_gettime();
 	
@@ -78,8 +81,13 @@ void start_current_process()
 void elect() 
 {
 
-	//on réinsère le processus dans l'arbre
-	insert_in_tree(&cfs_tree, current_process->execution_time, current_process);
+	//On détruit le processus s'il est fini, on le réinsère dans l'arbre sinon
+	if(current_process->status == PROCESS_TERMINATED)
+	{
+		kFree((uint8_t*)current_process, sizeof(struct pcb_s));
+	} else {
+		insert_in_tree(&cfs_tree, current_process->execution_time, current_process);
+	}
 	
 	/** Changement de processus **/
 
@@ -91,7 +99,7 @@ void elect()
 	current_process = current_node->process;
 	kFree((uint8_t*)current_node, sizeof(node));
 	
-	
+	current_process->execution_time += 10;
 	current_process->status = PROCESS_RUNNING;
 	
 }
@@ -106,7 +114,7 @@ void do_sys_yield(uint32_t * sp_param_base)
 {
 	
 	//On met à jour le temps d'exécution
-	current_process->execution_time = current_process->execution_time + (sys_gettime() - change_time);
+	//current_process->execution_time = current_process->execution_time + (sys_gettime() - change_time);
 
 	// save lr_user and sp_user
 	__asm("cps #31"); // Mode système
@@ -147,7 +155,7 @@ void do_sys_yield(uint32_t * sp_param_base)
 	*(sp_param_base + 13) = current_process->lr_svc;
 	
 	//On enregistre la date de changement
-	change_time=sys_gettime();
+	//change_time=sys_gettime();
 }
 
 int sys_exit(int status) 
@@ -162,9 +170,8 @@ int sys_exit(int status)
 
 void do_sys_exit(uint32_t * sp_param_base)
 {	
-
-	//On détruit le processus
-	kFree((uint8_t*)current_process, sizeof(struct pcb_s));
+	//Le processus est terminé
+	current_process->status = PROCESS_TERMINATED;
 
 	// Changement de process
 	elect();

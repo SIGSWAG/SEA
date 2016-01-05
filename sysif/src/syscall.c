@@ -123,12 +123,14 @@ void do_sys_nop() {
 }
 
 void sys_settime(uint64_t date_ms) {
-	__asm("mov r0, #3");
+	
 	// On enregistre date_ms dans un registre avant le SWI
 	uint32_t date_lowbits = date_ms & (0x00000000FFFFFFFF);
 	uint32_t date_highbits = date_ms >> 32;
 	__asm("mov r1, %0" : : "r"(date_lowbits));
 	__asm("mov r2, %0" : : "r"(date_highbits));
+	
+	__asm("mov r0, #3");
 	__asm("SWI #0");
 }
 
