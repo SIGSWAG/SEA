@@ -3,6 +3,8 @@
 #include "hw.h"
 #include "pmh.h"
 
+#define SCHEDULER PMH
+
 #define SP_SIZE 10000
 
 struct pcb_s kmain_process;
@@ -10,7 +12,9 @@ struct pcb_s kmain_process;
 uint32_t lr_user;
 uint32_t sp_user;
 
+#if SCHEDULER==PMH
 process_max_heap pmh;
+#endif
 
 void sched_init()
 {
@@ -20,8 +24,10 @@ void sched_init()
 	kmain_process.status = PROCESS_RUNNING;
 	current_process = &kmain_process;
 	
+#if SCHEDULER==PMH
 	// Mise en place du tas-max
 	max_heap_init(&pmh, &kmain_process);
+#endif
 
 	kheap_init();
 }
@@ -62,6 +68,7 @@ void start_current_process()
 	sys_exit(0);
 }
 
+#if SCHEDULER==PMH
 void elect()
 {
 	if(current_process->status == PROCESS_TERMINATED){
@@ -81,9 +88,9 @@ void elect()
 	current_process = pmh.heap[1];
 	current_process->status = PROCESS_RUNNING;
 }
-
-// Actuellement inutilisé... implémentation naïve de recherche de priorité max par parcours des processus
-void elect_simple() 
+#elif
+// Implémentation naïve de recherche de priorité max par parcours des processus
+void elect() 
 {
 	// Principe de l'ordonnanceur à priorité fixe :
 	// On recherche le processus ayant la priorité la plus forte (en tuant les processus terminés au passage)
@@ -131,6 +138,7 @@ void elect_simple()
 	current_process->status = PROCESS_RUNNING;
 	
 }
+#endif
 
 void sys_yield() 
 {
