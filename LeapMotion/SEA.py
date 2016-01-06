@@ -3,6 +3,7 @@ from Leap import SwipeGesture
 
 class SerialController(serial.Serial):
 
+
     def __init__(self, testing = False):
         super(SerialController, self).__init__()
         self.testing = testing
@@ -72,7 +73,7 @@ class LeapMotionForMusicListener(Leap.Listener):
         self._app_height = 400
         self._app_depth = 400
         self._detection_percentage = 0.5
-        self._temporisation = 1 * 1000000 # microseconds
+        self._temporisation = 0.5 * 1000000 # microseconds
         self._last_messages = []
         self._last_frame_timestamp = 0
 
@@ -137,10 +138,12 @@ class LeapMotionForMusicListener(Leap.Listener):
                 messages.append(self.messages_code["left"])
             elif diff_x > 0:
                 messages.append(self.messages_code["right"])
+            '''
             if diff_y < 0:
                 messages.append(self.messages_code["forward"])
             elif diff_y > 0:
                 messages.append(self.messages_code["backward"])
+            '''
             if diff_z < 0:
                 messages.append(self.messages_code["up"])
             elif diff_z > 0:
@@ -164,7 +167,9 @@ class LeapMotionForMusicListener(Leap.Listener):
         if not (frame.hands.is_empty and frame.gestures().is_empty):
             #print ""
             pass
-        if len(messages):
+
+        # sending the messages
+        if len(messages) == 1:
             for message in messages:
                 if message in self._last_messages: # if message was previously sent
                     if (frame.timestamp - self._last_frame_timestamp) > self._temporisation: # if delay is more than tempo
