@@ -12,6 +12,7 @@
 typedef int (func_t) (void);
 
 struct pcb_s * current_process;
+uint32_t next_tick;
 
 struct pcb_s {
 	int num;	

@@ -14,7 +14,6 @@ uint32_t sp_user;
 tree cfs_tree;
 /** En paramètre? **/
 uint64_t change_time;
-uint32_t next_tick;
 
 int nb_process = 0;
 
@@ -161,8 +160,8 @@ void do_sys_yield(uint32_t * sp_param_base)
 	change_time=get_date_ms();
 	
 	//Le temps donné est égal au temps d'attente divisé par le nombre de processus en attente.
-	next_tick =  (change_time - current_process->execution_time - current_process->arrival_time);
-	//next_tick /= ((uint32_t)cfs_tree.nb_node + 1);
+	next_tick = (change_time - current_process->execution_time - current_process->arrival_time);
+	next_tick = divide(next_tick,cfs_tree.nb_node + 1);
 }
 
 int sys_exit(int status) 

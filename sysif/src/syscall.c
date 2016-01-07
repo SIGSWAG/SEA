@@ -31,7 +31,7 @@ void __attribute__((naked)) irq_handler() {
 	__asm("pop {%0}" : "=r"(lr_irq));
 	
 	// On réarme le timer + active les interruptions
-	set_next_tick_default();
+	set_next_tick(/*next_tick*/10);
 	ENABLE_TIMER_IRQ();
 	ENABLE_IRQ();
 	
