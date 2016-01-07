@@ -267,9 +267,20 @@ void free_process_memory(struct pcb_s* process){
     }
 
 
-    //libération de la free list;
+    //libération de la free list pages ;
     struct block* current_block = process->first_empty_block;
-    while(current_process!=0){
+    while(current_block!=0){
+
+        struct block* tampon = current_block;
+        current_block = current_block->next;
+        kFree((uint8_t*)tampon, sizeof(struct block));
+
+
+    }
+
+    //libération de la free list octets ;
+    current_block = process->first_empty_block_heap;
+    while(current_block!=0){
 
         struct block* tampon = current_block;
         current_block = current_block->next;
@@ -281,6 +292,21 @@ void free_process_memory(struct pcb_s* process){
 
 
     kFree((uint8_t*)table1, FIRST_LVL_TT_SIZE);
+
+
+    //libération des tables d'allocations
+    for(int i=0; i<process->allocated_adresses_size; i++){
+
+        kFree((void*)process->allocated_adresses[i], sizeof(int)*2);
+
+
+    }
+    kFree((void*)process->allocated_adresses, sizeof(int)*process->allocated_adresses_size);
+
+
+
+
+
 
 }
 
@@ -531,7 +557,7 @@ void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages)
 
     //On cherche nbPages Frames libres;
     int indexOccup = 0;
-    int* addresses  = (int*) kAlloc(sizeof(int)*nbPages);//tableau qui contiendra les adresses des frames
+    int* addresses  = (int*) kAlloc(sizeof(int)*nbPages+32);//tableau qui contiendra les adresses des frames
     int indexAddr = 0;
 
     while(indexAddr < nbPages && indexOccup < OCCUPATION_TABLE_SIZE)//tant que le tableau n'est pas rempli
@@ -619,7 +645,7 @@ void* vmem_alloc_for_userland(struct pcb_s* process, int nbPages)
 
 
 
-   // kFree((void *)addresses, sizeof(int)*nbPages);//libération du tableau
+    kFree((void *)addresses, sizeof(int)*nbPages+32);//libération du tableau
     return retour;
 
 }
@@ -904,6 +930,41 @@ void* do_gmalloc(struct pcb_s* process, int size){
             found = 1;
         }
         i++;
+
+    }
+
+    if(found==0 && i==process->allocated_adresses_size){ //il faut réallouer
+
+        int ** allocated_adresses = (int**) kAlloc(sizeof(int)*process->allocated_adresses_size*2); //on recopie tout dans un tableau plus grand
+
+        for(int i=0; i<process->allocated_adresses_size*2;i++){
+
+
+            allocated_adresses[i]= (int*) kAlloc(sizeof(int)*2);
+
+            allocated_adresses[i][0] = 0;
+
+            if(i<process->allocated_adresses_size){
+                allocated_adresses[i][0] = process->allocated_adresses[i][0];
+                allocated_adresses[i][1] = process->allocated_adresses[i][1];
+
+            }
+        }
+
+
+        for(int i=0; i<process->allocated_adresses_size; i++){ //libération du tableau précédent
+
+            kFree((void*)process->allocated_adresses[i], sizeof(int)*2);
+
+
+        }
+        kFree((void*)process->allocated_adresses, sizeof(int)*process->allocated_adresses_size);
+
+
+
+        process->allocated_adresses_size = process->allocated_adresses_size*2;
+        process->allocated_adresses =  allocated_adresses;
+
 
     }
 
