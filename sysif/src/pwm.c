@@ -129,6 +129,7 @@ audio_init(void)
 
     unsigned int range = 0x400;
     unsigned int idiv = 2;
+    unsigned int fdiv = 512; // freq = source / ( divi + divf / 1024)
     /* unsigned int pwmFrequency = (19200000 / idiv) / range; */
 
     SET_GPIO_ALT(40, 0);
@@ -136,7 +137,7 @@ audio_init(void)
     pause_physique(2);
 
     *(clk + BCM2835_PWMCLK_CNTL) = PM_PASSWORD | (1 << 5);    // stop clock
-    *(clk + BCM2835_PWMCLK_DIV)  = PM_PASSWORD | (idiv<<12);  // set divisor
+    *(clk + BCM2835_PWMCLK_DIV)  = PM_PASSWORD | (idiv<<12) | fdiv;  // set divisor
     *(clk + BCM2835_PWMCLK_CNTL) = PM_PASSWORD | 16 | 1;      // enable + oscillator (raspbian has this as plla)
 
     pause_physique(2); 
