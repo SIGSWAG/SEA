@@ -5,6 +5,7 @@
 #include "asm_tools.h"
 #include "vmem.h"
 #include "uart.h"
+#include "pwm.h"
 
 
 
@@ -57,6 +58,22 @@ void user_process1(){
     while( 1 ) {
         v1++;
     }
+
+}
+
+
+
+void
+play_music()
+{
+	lance_audio();
+}
+
+void
+config_music()
+{
+	configuration_audio();
+
 }
 
 void user_process2()
@@ -98,7 +115,7 @@ kmain(void){
     /** Exemple de sortie console **/
     uart_init();
     uart_send_str("hello\n");
-
+    hw_init();
     sched_init();
 
     create_process((func_t*) &user_process1);
@@ -124,4 +141,6 @@ kmain(void){
 	//	uart_send_str("-----------user_process1\n");
 
 }
+
+
 
