@@ -2,6 +2,7 @@
 #include "asm_tools.h"
 #include "uart.h"
 #include "config.h"
+#include "sched.h"
 
 //
 // Constante des puissances de 10
@@ -40,7 +41,7 @@ void uart_init(void)
 	// On initialisation UART
 	// On clear la line
 	Set32(UART_LCRH, 0u);
-	// On clear les intéruptions
+	// On clear les interruptions
 	Set32(UART_ICR, 0u);
 	// On règles le baud rate à 115200 baud
 	Set32(UART_IBRD, 1u);
@@ -154,12 +155,14 @@ void uart_send_int(int n)
 		}
 	}
 
+	// str est une chaine de caractere finissant par le caractere nul.
+	// Ayant l'entier 123 au depart on finis avec la str "123" 
 	uart_send_str(str);
 }
 
 //
 // Permet de recevoir des caractères
-// Block jusqu'a la reception de n-1 caractères, ou la reception
+// Bloque jusqu'a la reception de n-1 caractères, ou la reception
 //	du caractère nul.
 // NOTE : Un caractère nul est placé automatiquement en fin de
 //	chaine.
@@ -178,11 +181,13 @@ int uart_receive_str(char *buffer, unsigned int n)
 	do
 	{
 		// On attend que se ne soit pas vide
-		while ((Get32(UART_FR) & (1u << 4u)) != 0);
+		//while ((Get32(UART_FR) & (1u << 4u)) != 0);
+		sys_wait(PROCESS_DETAILS_WAITING_SERIAL);
+
 		// Lecture du byte
 		byte = Get32(UART_DR) & 0xFFu;
 
-		// On vérifique que se n'est pas la fin
+		// On vérifie que que se n'est pas la fin
 		if (byte == 0u)
 		{
 			break;

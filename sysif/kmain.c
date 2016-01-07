@@ -7,8 +7,44 @@
 #include "uart.h"
 
 
-void user_process1()
+
+void serialReceiver()
 {
+    while(1){
+            char msg[2];
+            // bloquant mais attente non active
+            uart_receive_str(msg, 2);
+            // detection du caractere reçu
+            switch(msg[0]){
+                    case 'L':
+                            // Left
+                            break;
+                    case 'R':
+                            // Right
+                            break;
+                    case 'U':
+                            // Up
+                            break;
+                    case 'D':
+                            // Dow;n
+                            break;
+                    case 'F':
+                            // Forward
+                            break;
+                    case 'B':
+                            // Backward
+                            break;
+            }
+    }
+}
+
+
+
+
+
+
+void user_process1(){
+
     int v1 = 5;
     /**int* alloc = (int*) sys_mmap();
     int* alloc2 = (int*) sys_mmap();
@@ -34,6 +70,7 @@ void user_process2()
 
 void user_process3()
 {
+
 	// Provoque un data abort
 	//int * pt = (int *) 0x1100001;
 	//*pt = 12;
@@ -64,7 +101,7 @@ kmain(void){
 
     sched_init();
 
-    //create_process((func_t*) &user_process1);
+    create_process((func_t*) &user_process1);
     //create_process((func_t*) &user_process2);
     create_process((func_t*) &user_process3);
 
@@ -84,4 +121,7 @@ kmain(void){
     while(1) {
         sys_yield();
     }
+	//	uart_send_str("-----------user_process1\n");
+
 }
+

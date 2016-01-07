@@ -7,6 +7,10 @@
 #define PROCESS_RUNNING 1
 #define PROCESS_WAITING 2
 #define PROCESS_CREATED 3
+#define PROCESS_SLEEPING 4
+
+#define PROCESS_DETAILS_NONE 0
+#define PROCESS_DETAILS_WAITING_SERIAL 1
 
 typedef int (func_t) (void);
 
@@ -23,6 +27,7 @@ struct block {
 };
 
 struct pcb_s {
+
     uint32_t regs[13];
     uint32_t sp;
     uint32_t lr_svc;
@@ -30,6 +35,7 @@ struct pcb_s {
     uint32_t cpsr;
     int status;
     int returnCode;
+    int status_details;
     unsigned int * page_table;
     func_t * entry;
     struct pcb_s * next_pcb;
@@ -97,4 +103,7 @@ int sys_exit(int status);
  */
 void do_sys_exit(uint32_t * sp_param_base);
 
+void sys_wait(int details_flag);
+
+void do_sys_wait(uint32_t * sp_param_base);
 #endif

@@ -58,7 +58,6 @@ void __attribute__((naked)) irq_handler() {
 void __attribute__((naked)) swi_handler() {
 
 
-
     // Sauvegarde du contexte
     __asm("stmfd sp!, {r0-r12, lr}");
     //recuperation de l'adresse de SP
@@ -103,6 +102,8 @@ void __attribute__((naked)) swi_handler() {
         break;
     case 11 :
         do_sys_gfree(sp_param_base);
+    case 12 :
+        do_sys_wait(sp_param_base);
         break;
     default :
         PANIC();
