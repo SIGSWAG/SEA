@@ -192,6 +192,9 @@ void infixe(node* nil, node* x){
 }
 
 void insert(tree *T, node *z){
+
+	T->nb_node++;
+
     node* y = T->nil;
     node* x = T->root;
 
@@ -341,6 +344,8 @@ void rb_delete_correction(tree* T, node*x){
 }
 
 void rb_delete(tree* T, node* z){
+
+	T->nb_node--;
 
     node* y = z;
     node* x;

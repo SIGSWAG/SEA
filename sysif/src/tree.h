@@ -20,7 +20,7 @@ typedef struct node node;
 struct tree{
     node* root;
     node* nil;
-
+    int nb_node;
 };
 
 typedef struct tree tree;

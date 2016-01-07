@@ -12,7 +12,10 @@ uint32_t lr_user;
 uint32_t sp_user;
 
 tree cfs_tree;
+/** En paramètre? **/
 uint64_t change_time;
+uint32_t next_tick;
+
 int nb_process = 0;
 
 void sched_init()
@@ -26,6 +29,7 @@ void sched_init()
 	nil->parent = nil;
 	cfs_tree.nil = nil;
 	cfs_tree.root = nil;
+	cfs_tree.nb_node = 0;
 	nil->key = -1;
     
 	// initialisation du process kmain
@@ -99,7 +103,6 @@ void elect()
 	current_process = current_node->process;
 	kFree((uint8_t*)current_node, sizeof(node));
 	
-	current_process->execution_time += 10;
 	current_process->status = PROCESS_RUNNING;
 	
 }
@@ -114,7 +117,7 @@ void do_sys_yield(uint32_t * sp_param_base)
 {
 	
 	//On met à jour le temps d'exécution
-	//current_process->execution_time = current_process->execution_time + (sys_gettime() - change_time);
+	current_process->execution_time += (get_date_ms() - change_time);
 
 	// save lr_user and sp_user
 	__asm("cps #31"); // Mode système
@@ -155,7 +158,11 @@ void do_sys_yield(uint32_t * sp_param_base)
 	*(sp_param_base + 13) = current_process->lr_svc;
 	
 	//On enregistre la date de changement
-	//change_time=sys_gettime();
+	change_time=get_date_ms();
+	
+	//Le temps donné est égal au temps d'attente divisé par le nombre de processus en attente.
+	next_tick =  (change_time - current_process->execution_time - current_process->arrival_time);
+	//next_tick /= ((uint32_t)cfs_tree.nb_node + 1);
 }
 
 int sys_exit(int status) 
