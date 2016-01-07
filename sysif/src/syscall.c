@@ -102,6 +102,7 @@ void __attribute__((naked)) swi_handler() {
         break;
     case 11 :
         do_sys_gfree(sp_param_base);
+        break;
     case 12 :
         do_sys_wait(sp_param_base);
         break;
