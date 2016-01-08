@@ -130,7 +130,7 @@ led_blink(void)
         led_on();
         for (waiting = 0; waiting < 1000*5000; waiting++);
         led_off();
-        for (waiting = 0; waiting < 1000*5000; waiting++);                
+        for (waiting = 0; waiting < 1000*5000; waiting++); 
     }
 }
 

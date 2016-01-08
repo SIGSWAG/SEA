@@ -12,7 +12,6 @@ struct pcb_s kmain_process;
 uint32_t lr_user;
 uint32_t sp_user;
 
-
 void sched_init()
 {
 
@@ -387,4 +386,3 @@ void do_sys_wait(uint32_t * sp_param_base)
     ENABLE_IRQ();
 #endif
 }
-

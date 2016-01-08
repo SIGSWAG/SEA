@@ -111,4 +111,5 @@ void do_sys_exit(uint32_t * sp_param_base);
 void sys_wait(int details_flag);
 
 void do_sys_wait(uint32_t * sp_param_base);
+
 #endif

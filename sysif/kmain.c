@@ -7,8 +7,6 @@
 #include "uart.h"
 #include "pwm.h"
 
-
-
 void serialReceiver()
 {
     while(1){
@@ -38,11 +36,6 @@ void serialReceiver()
             }
     }
 }
-
-
-
-
-
 
 void user_process1(){
 
@@ -113,33 +106,33 @@ void
 kmain(void){
 
     /** Exemple de sortie console **/
-    uart_init();
-    uart_send_str("hello\n");
     hw_init();
+    uart_send_str("hello\n");
     sched_init();
 
     create_process((func_t*) &user_process1);
     //create_process((func_t*) &user_process2);
     create_process((func_t*) &user_process3);
 
-    timer_init();
-    // Activation des interruptions
-    ENABLE_IRQ();
+    // musique
+    create_process((func_t*) &play_music);
+    create_process((func_t*) &config_music);
+
+// Activation des interruptions
+#ifdef IRQS_ACTIVEES
+        timer_init();
+        ENABLE_IRQ();       
+#endif
 
     __asm("cps 0x10"); // switch CPU to USER mode
-
-
 
 
     //uint32_t  tr = vmem_translate(0x8000, 0);
 
 
-
     while(1) {
         sys_yield();
     }
-	//	uart_send_str("-----------user_process1\n");
-
 }
 
 

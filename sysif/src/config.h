@@ -8,6 +8,6 @@
 #define DEBUG 1
 #define VMEM 1
 
-#define IRQS_ACTIVEES 1
+#define IRQS_ACTIVEES 0
 
 #endif
