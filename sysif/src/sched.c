@@ -20,16 +20,19 @@ int nb_process = 0;
 void sched_init()
 {
 
+	//initialisation du tas
+	kheap_init();
+	
 	//Init a tree, with its nil node
 	node* nil = (node*) kAlloc(sizeof(node));
 	nil->color=BLACK;
 	nil->left = nil;
 	nil->right = nil;
 	nil->parent = nil;
+	nil->key = -1;
 	cfs_tree.nil = nil;
 	cfs_tree.root = nil;
 	cfs_tree.nb_node = 0;
-	nil->key = -1;
     
 	// initialisation du process kmain
 	kmain_process.status = PROCESS_RUNNING;
@@ -37,13 +40,10 @@ void sched_init()
 	
 	kmain_process.num=nb_process++;
 	kmain_process.execution_time=0;
-	insert_in_tree(&cfs_tree, 0, &kmain_process);
 
 	//initialisation de la date à 0
-	sys_settime(900);
+	sys_settime(0);
 
-	//initialisation du tas
-	kheap_init();
 }
 
 void create_process(func_t* entry) 
@@ -89,6 +89,7 @@ void elect()
 	{
 		kFree((uint8_t*)current_process, sizeof(struct pcb_s));
 	} else {
+		current_process->status = PROCESS_WAITING;
 		insert_in_tree(&cfs_tree, current_process->execution_time, current_process);
 	}
 	
