@@ -1,7 +1,8 @@
-import Leap, sys, thread, time, serial
-from Leap import SwipeGesture
+import Leap, sys, thread, time, serial, math
+from Leap import SwipeGesture, Bone, CircleGesture
 
 class SerialController(serial.Serial):
+    messages_code = {'left':'L', 'right':'R', 'up':'U', 'down':'D', 'forward':'F', 'backward':'B', 'clockwise':'+', 'counterclockwise':'-', 'fistClosed':'I', 'fistOpened':'O'}
 
 
     def __init__(self, testing = False):
@@ -26,14 +27,13 @@ class SerialController(serial.Serial):
         if self.testing:
             print "Testing : "
         else:
-            super(SerialController, self).write(string)
-        print "Message '%s' has been sent" % string
+            super(SerialController, self).write(self.messages_code[string])
+        print "Message '%s' (%s) has been sent" % (self.messages_code[string], string)
 
 class LeapMotionForMusicListener(Leap.Listener):
     finger_names = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']
     bone_names = ['Metacarpal', 'Proximal', 'Intermediate', 'Distal']
     state_names = ['STATE_INVALID', 'STATE_START', 'STATE_UPDATE', 'STATE_END']
-    messages_code = {'left':'L', 'right':'R', 'up':'U', 'down':'D', 'forward':'F', 'backward':'B'}
 
     @property
     def app_width(self):
@@ -72,10 +72,14 @@ class LeapMotionForMusicListener(Leap.Listener):
         self._app_width = 600
         self._app_height = 400
         self._app_depth = 400
-        self._detection_percentage = 0.5
+        self._detection_percentage = 0.8
         self._temporisation = 0.5 * 1000000 # microseconds
         self._last_messages = []
         self._last_frame_timestamp = 0
+        self._circle_turns = 0
+        self._fist_min_detection = 0.5
+        self._last_fist_state = False
+
 
     def on_init(self, controller):
         if not self._serial.isOpen():
@@ -87,6 +91,7 @@ class LeapMotionForMusicListener(Leap.Listener):
 
         # Enable gestures
         controller.enable_gesture(Leap.Gesture.TYPE_SWIPE);
+        controller.enable_gesture(Leap.Gesture.TYPE_CIRCLE);
 
     def on_disconnect(self, controller):
         # Note: not dispatched when running in a debugger.
@@ -112,73 +117,99 @@ class LeapMotionForMusicListener(Leap.Listener):
             return
 
         # Get hands
-        for hand in frame.hands:
+        if len(frame.gestures()) == 0:
+            for hand in frame.hands:
 
-            handType = "Left hand" if hand.is_left else "Right hand"
+                handType = "Left hand" if hand.is_left else "Right hand"
 
-            #print "  %s, id %d, position: %s" % (
-            #    handType, hand.id, hand.palm_position)
+                #print "Expoential Fist : "+str(self.is_fist(hand))
+                #print "  %s, id %d, position: %s" % (
+                #    handType, hand.id, hand.palm_position)
 
-            normalized_palm_position = i_box.normalize_point(hand.palm_position)
-            # Normalized position is between [0,1]
-            # Scale and center
-            position_x = (self.app_width  * normalized_palm_position.x) - (self.app_width / 2)
-            position_y = (self.app_height * (1 - normalized_palm_position.y)) - (self.app_height / 2)
-            position_z = (self.app_depth * normalized_palm_position.z) - (self.app_depth / 2)
+                normalized_palm_position = i_box.normalize_point(hand.palm_position)
+                # Normalized position is between [0,1]
+                # Scale and center
+                position_x = (self.app_width  * normalized_palm_position.x) - (self.app_width / 2)
+                position_y = (self.app_height * (1 - normalized_palm_position.y)) - (self.app_height / 2)
+                position_z = (self.app_depth * normalized_palm_position.z) - (self.app_depth / 2)
 
-            # Get the hand's normal vector and direction
-            normal = hand.palm_normal
-            direction = hand.direction
+                # Get the hand's normal vector and direction
+                normal = hand.palm_normal
+                direction = hand.direction
 
-            diff_x = self._outsideX(position_x)
-            diff_y = self._outsideY(position_y)
-            diff_z = self._outsideZ(position_z)
+                diff_x = self._outsideX(position_x)
+                diff_y = self._outsideY(position_y)
+                diff_z = self._outsideZ(position_z)
 
-            if diff_x < 0:
-                messages.append(self.messages_code["left"])
-            elif diff_x > 0:
-                messages.append(self.messages_code["right"])
-            '''
-            if diff_y < 0:
-                messages.append(self.messages_code["forward"])
-            elif diff_y > 0:
-                messages.append(self.messages_code["backward"])
-            '''
-            if diff_z < 0:
-                messages.append(self.messages_code["up"])
-            elif diff_z > 0:
-                messages.append(self.messages_code["down"])
+                if diff_x < 0:
+                    messages.append("left")
+                elif diff_x > 0:
+                    messages.append("right")
+                
+                if diff_y < 0:
+                    messages.append("up")
+                elif diff_y > 0:
+                    messages.append("down")
+                
+                if diff_z < 0:
+                    messages.append("forward")
+                elif diff_z > 0:
+                    messages.append("backward")
+
+                # Calculate the hand's pitch, roll, and yaw angles
+                #print "  pitch: %f degrees, roll: %f degrees, yaw: %f degrees" % (
+                #    direction.pitch * Leap.RAD_TO_DEG,
+                #    normal.roll * Leap.RAD_TO_DEG,
+                #    direction.yaw * Leap.RAD_TO_DEG)
+
             
+            fist = self.is_fist(hand)
+            if fist != self._last_fist_state:
+                self._last_fist_state = fist
+                if fist == True:
+                    messages.append("fistClosed")
+                else:
+                    messages.append("fistOpened")
 
-            # Calculate the hand's pitch, roll, and yaw angles
-            #print "  pitch: %f degrees, roll: %f degrees, yaw: %f degrees" % (
-            #    direction.pitch * Leap.RAD_TO_DEG,
-            #    normal.roll * Leap.RAD_TO_DEG,
-            #    direction.yaw * Leap.RAD_TO_DEG)
+            # sending the messages, one message only
+            if len(messages) == 1:
+                for message in messages:
+                    if message in self._last_messages: # if message was previously sent
+                        if (frame.timestamp - self._last_frame_timestamp) > self._temporisation: # if delay is more than tempo
+                            self._serial.write(message)
+                            self._last_frame_timestamp = frame.timestamp
+                    else:
+                        self._serial.write(message)
+                        self._last_frame_timestamp = frame.timestamp
+            self._last_messages = messages
 
         # Get gestures
         for gesture in frame.gestures():
             if gesture.type == Leap.Gesture.TYPE_SWIPE:
                 swipe = SwipeGesture(gesture)
+            if gesture.type == Leap.Gesture.TYPE_CIRCLE:
+                circle = Leap.CircleGesture(gesture)
+                completeTurns = math.floor(circle.progress)
+                if completeTurns > 0 and completeTurns == self._circle_turns + 1:
+                    print "complete : "+str(completeTurns)
+                    message = ""
+                    if (circle.pointable.direction.angle_to(circle.normal) <= Leap.PI/2):
+                        # clockwiseness = True
+                        message = "clockwise"
+                    else:
+                        # clockwiseness = False
+                        message = "counterclockwise"
+                    self._serial.write(message)
+                    self._last_frame_timestamp = frame.timestamp
+                    self._last_messages = []
+                self._circle_turns = completeTurns
                 #print "  Swipe id: %d, state: %s, position: %s, direction: %s, speed: %f" % (
                 #        gesture.id, self.state_names[gesture.state],
                 #        swipe.position, swipe.direction, swipe.speed)
+        
+        # if not (frame.hands.is_empty and frame.gestures().is_empty):
+        #    print ""
 
-        if not (frame.hands.is_empty and frame.gestures().is_empty):
-            #print ""
-            pass
-
-        # sending the messages
-        if len(messages) == 1:
-            for message in messages:
-                if message in self._last_messages: # if message was previously sent
-                    if (frame.timestamp - self._last_frame_timestamp) > self._temporisation: # if delay is more than tempo
-                        self._serial.write(message)
-                        self._last_frame_timestamp = frame.timestamp
-                else:
-                    self._serial.write(message)
-                    self._last_frame_timestamp = frame.timestamp
-        self._last_messages = messages
     
     def _outsideX(self, x):
         limit = self.detection_width / 2
@@ -216,3 +247,22 @@ class LeapMotionForMusicListener(Leap.Listener):
 
         if state == Leap.Gesture.STATE_INVALID:
             return "STATE_INVALID"
+
+    def get_extended_fingers(self, hand):
+        return len(hand.fingers.extended())
+    
+    def is_fist(self, hand):
+        total = 0
+        for finger in hand.fingers:
+            meta = finger.bone(Bone.TYPE_METACARPAL).direction
+            proxi = finger.bone(Bone.TYPE_PROXIMAL).direction
+            inter = finger.bone(Bone.TYPE_INTERMEDIATE).direction
+            dMetaProxi = meta.dot(proxi)
+            dProxiInter = proxi.dot(inter)
+            total += dMetaProxi
+            total += dProxiInter
+        total /= 10
+        if total <= self._fist_min_detection and self.get_extended_fingers(hand) == 0:
+            return True
+        else:
+            return False
