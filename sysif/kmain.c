@@ -23,9 +23,13 @@ void serialReceiver()
 				break;
 			case 'R':
 				// Right
+				// Accelerer
+				augmenter_vitesse();
 				break;
 			case 'U':
 				// Up
+				// Ralentir
+				diminuer_vitesse();
 				break;
 			case 'D':
 				// Down
@@ -38,15 +42,28 @@ void serialReceiver()
 				break;
 			case '+':
 				// Circle clockwise
+				// Monter le son
+				augmenter_volume();
 				break;
 			case '-':
 				// Circle counterclockwise
+				// Baisser le son
+				diminuer_volume();
 				break;
 			case 'I':
 				// FistClosed
+				// Play / pause
+				if(musique_est_arretee()){
+					musique_lecture();
+				}
+				else{
+					musique_pause();
+				}
 				break;
 			case 'O':
 				// FistOpened
+				break;
+			default:
 				break;
 		}
 	}
