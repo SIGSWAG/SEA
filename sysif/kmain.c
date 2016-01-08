@@ -11,32 +11,45 @@
 
 void serialReceiver()
 {
-    while(1){
-            char msg[2];
-            // bloquant mais attente non active
-            uart_receive_str(msg, 2);
-            // detection du caractere reçu
-            switch(msg[0]){
-                    case 'L':
-                            // Left
-                            break;
-                    case 'R':
-                            // Right
-                            break;
-                    case 'U':
-                            // Up
-                            break;
-                    case 'D':
-                            // Dow;n
-                            break;
-                    case 'F':
-                            // Forward
-                            break;
-                    case 'B':
-                            // Backward
-                            break;
-            }
-    }
+	//	uart_send_str("-----------user_process1\n");
+	while(1){
+		char msg[2];
+		// bloquant mais attente non active
+		uart_receive_str(msg, 2);
+		// detection du caractere reçu
+		switch(msg[0]){
+			case 'L':
+				// Left
+				break;
+			case 'R':
+				// Right
+				break;
+			case 'U':
+				// Up
+				break;
+			case 'D':
+				// Down
+				break;
+			case 'F':
+				// Forward
+				break;
+			case 'B':
+				// Backward
+				break;
+			case '+':
+				// Circle clockwise
+				break;
+			case '-':
+				// Circle counterclockwise
+				break;
+			case 'I':
+				// FistClosed
+				break;
+			case 'O':
+				// FistOpened
+				break;
+		}
+	}
 }
 
 
