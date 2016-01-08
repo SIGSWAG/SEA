@@ -108,13 +108,20 @@ void user_process3()
     }
 }
 
+void print_boot_message() {
+	uart_send_str(" _       __________    __________  __  _________ \n| |     / / ____/ /   / ____/ __ \\/  |/  / ____/ \n| | /| / / __/ / /   / /   / / / / /|_/ / __/ \n| |/ |/ / /___/ /___/ /___/ /_/ / /  / / /___  \n|__/|__/_____/_____/\\____/\\____/_/  /_/_____/ \n\n");
+    uart_send_str("ssOS booting ...\nLoading the greatness ...\nPowered by SIGSWAG Ltd. Check us out on www.sigswag.com !\n");
+    uart_send_str("              ____  _____ \n   __________/ __ \\/ ___/\n  / ___/ ___/ / / /\\__ \\ \n (__  |__  ) /_/ /___/ / \n/____/____/\\____//____/ \n\n"); 
+                                                                  
+}
+
 
 void
 kmain(void){
 
     /** Exemple de sortie console **/
     uart_init();
-    uart_send_str("hello\n");
+    print_boot_message();
     hw_init();
     sched_init();
 
