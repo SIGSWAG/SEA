@@ -11,7 +11,6 @@ static uint32_t lr_irq;
 
 
 void __attribute__((naked)) irq_handler() {
-
     __asm("mov %0, lr" : "=r"(lr_irq));
 
     // Switch to SVC
@@ -32,8 +31,6 @@ void __attribute__((naked)) irq_handler() {
     // Changement de contexte
     do_sys_yield(sp_param_base);
 
-    // On reconfigure la MMU avec la table des pages du nouveau processus élu
-
     // Restitution du contexte
     __asm("ldmfd sp!, {r0-r12}");
     // On récupère lr_irq (on l'a pushé avant)
@@ -43,10 +40,9 @@ void __attribute__((naked)) irq_handler() {
     set_next_tick_default();
     ENABLE_TIMER_IRQ();
     ENABLE_IRQ();
-
-
-
+    
     invalidate_TLB();
+    // On reconfigure la MMU avec la table des pages du nouveau processus élu
     configure_mmu_C((unsigned int)current_process->page_table);
 
     // Switch to user
