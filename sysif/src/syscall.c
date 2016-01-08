@@ -8,8 +8,6 @@
 static uint32_t * sp_param_base;
 static uint32_t lr_irq;
 
-
-
 void __attribute__((naked)) irq_handler() {
     __asm("mov %0, lr" : "=r"(lr_irq));
 
@@ -49,6 +47,7 @@ void __attribute__((naked)) irq_handler() {
     __asm("cps 0x10");
     // On jump au lr_irq (décrémenté de 4 avant)
     __asm("mov pc, %0": :"r"(lr_irq));
+
 }
 
 void __attribute__((naked)) swi_handler() {
@@ -156,13 +155,14 @@ void do_sys_nop() {
 }
 
 void sys_settime(uint64_t date_ms) {
-    __asm("mov r0, #3");
-    // On enregistre date_ms dans un registre avant le SWI
-    uint32_t date_lowbits = date_ms & (0x00000000FFFFFFFF);
-    uint32_t date_highbits = date_ms >> 32;
-    __asm("mov r1, %0" : : "r"(date_lowbits));
-    __asm("mov r2, %0" : : "r"(date_highbits));
-    __asm("SWI #0");
+	// On enregistre date_ms dans un registre avant le SWI
+	uint32_t date_lowbits = date_ms & (0x00000000FFFFFFFF);
+	uint32_t date_highbits = date_ms >> 32;
+	__asm("mov r1, %0" : : "r"(date_lowbits));
+	__asm("mov r2, %0" : : "r"(date_highbits));
+	
+	__asm("mov r0, #3");
+	__asm("SWI #0");
 }
 
 void do_sys_settime() {
@@ -216,58 +216,40 @@ void* gmalloc(int nbBytes)
 
 
 
-void do_sys_gmalloc(uint32_t * sp_param){
-
+void do_sys_gmalloc(uint32_t * sp_param) {
     void* ret = do_gmalloc(current_process, (int)sp_param[1]);
     sp_param[0] = (uint32_t) ret;
-
 }
 
 
 
 void do_sys_mmap(uint32_t * sp_param){
-
     void* ret = vmem_alloc_for_userland(current_process, (int)sp_param[1]);
     sp_param[0] = (uint32_t) ret;
-
 }
 
 void sys_munmap(void* pointer, int nbPages){
-
     __asm("mov r0, #9");
     __asm("mov r1, %0" : : "r"(pointer));
     __asm("mov r2, %0" : : "r"(nbPages));
     __asm("SWI #0");
-
-
 }
 
 void gfree(void* pointer){
-
     __asm("mov r0, #11");
     __asm("mov r1, %0" : : "r"(pointer));
     __asm("SWI #0");
-
-
 }
 
 void do_sys_gfree(uint32_t * sp_param){
-
-
     void * pointer = (void*) sp_param[1];
     do_gfree(current_process, pointer);
-
-
 }
 
 void do_sys_munmap(uint32_t * sp_param){
-
-
     void * pointer = (void*) sp_param[1];
     int nbPages = (int)sp_param[2];
     vmem_desalloc_for_userland(current_process, pointer, nbPages);
-
-
 }
 
 

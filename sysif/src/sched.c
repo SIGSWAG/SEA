@@ -1,9 +1,11 @@
 #include "sched.h"
 #include "kheap.h"
+#include "tree.h"
 #include "hw.h"
 #include "vmem.h"
 #include "pwm.h"
 #include "asm_tools.h"
+#include "syscall.h"
 
 #define SP_SIZE 10000
 
@@ -12,11 +14,15 @@ struct pcb_s kmain_process;
 uint32_t lr_user;
 uint32_t sp_user;
 
+tree cfs_tree;
+/** En paramètre? **/
+uint64_t change_time;
+
+int nb_process = 0;
 
 void sched_init()
 {
-
-
+	//initialisation du tas
     kheap_init();
 #if VMEM
     vmem_init();
@@ -28,13 +34,29 @@ void sched_init()
     kmain_process.page_table = init_table_page();
     current_process = &kmain_process;
 
+#if CFS
+	//Init a tree, with its nil node
+	// TODO Mettre galloc 
+	node* nil = (node*) kAlloc(sizeof(node));
+	nil->color=BLACK;
+	nil->left = nil;
+	nil->right = nil;
+	nil->parent = nil;
+	nil->key = -1;
+	cfs_tree.nil = nil;
+	cfs_tree.root = nil;
+	cfs_tree.nb_node = 0;
+	
+	kmain_process.num=nb_process++;
+	kmain_process.execution_time=0;
 
+	//initialisation de la date à 0
+	sys_settime(0);
+#endif
 }
 
 void create_process(func_t* entry) 
 {
-
-
     // On configure la MMU avec la table des pages système
     invalidate_TLB();
     configure_mmu_kernel();
@@ -49,7 +71,6 @@ void create_process(func_t* entry)
     block->next = 0; //un seul bloc disponible
     block->previous = 0;
 
-
     // Mise en place du lr_svc, lr_user, et du cpsr
     pcb->entry = entry;
     pcb->lr_svc = (uint32_t)&start_current_process;
@@ -57,8 +78,6 @@ void create_process(func_t* entry)
     pcb->first_empty_block = block;
     pcb->cpsr = 0x150; //1010 10000 -> User mode + no interrupt
     //__asm("mrs %0, cpsr" : "=r"(pcb->cpsr));
-
-
 
     pcb->status = PROCESS_WAITING;
     pcb->status_details = PROCESS_DETAILS_NONE;
@@ -77,20 +96,25 @@ void create_process(func_t* entry)
     pcb->allocated_adresses = (int**) kAlloc(sizeof(int)*100);
 
     for(int i=0; i<100;i++){
-
-
-
         pcb->allocated_adresses[i]= (int*) kAlloc(sizeof(int)*2);
 
         pcb->allocated_adresses[i][0] = 0;
     }
     pcb->allocated_adresses_size = 100;
 
-
-
     //on reset la page des tables du processus courant
     invalidate_TLB();
     configure_mmu_kernel();
+    
+#if CFS    
+    // On initialise le temps d'execution à 0 et on enregistre la date d'arrivée du processus
+	pcb->num=nb_process++;
+	pcb->execution_time=0;
+	pcb->arrival_time = sys_gettime();
+	
+	// On intègre le nouveau processus dans l'arbre du CFS
+	insert_in_tree(&cfs_tree, 0, pcb);
+#endif
 
     return;
 }
@@ -100,6 +124,7 @@ void __attribute__((naked)) start_current_process()
     __asm("blx lr");
     __asm("mov r0, %0" : : "r"(0));
     __asm("b sys_exit");
+
 }
 
 // parcours les process pour voir s'ils sont endormi et s'il peut les reveiller
@@ -155,6 +180,29 @@ void update_process_list()
 void elect() 
 {
 
+#if CFS
+	//On détruit le processus s'il est fini, on le réinsère dans l'arbre sinon
+	if(current_process->status == PROCESS_TERMINATED)
+	{
+		kFree((uint8_t*)current_process, sizeof(struct pcb_s));
+	} else {
+		current_process->status = PROCESS_WAITING;
+		insert_in_tree(&cfs_tree, current_process->execution_time, current_process);
+	}
+	
+	/** Changement de processus **/
+
+	//on cherche le processus qui a été exécuté le moins longtemps et on l'enlève de l'arbre
+	node* current_node = tree_minimum(cfs_tree.nil, cfs_tree.root);
+	rb_delete(&cfs_tree, current_node);
+	
+	//on récupère la pcb et on libère le noeud
+	current_process = current_node->process;
+	kFree((uint8_t*)current_node, sizeof(node));
+	
+	current_process->status = PROCESS_RUNNING;
+#else
+	// TODO Voir si besoin dans le CFS
     update_process_list();
 
     // on kill tous les PROCESS_TERMINATED
@@ -189,8 +237,7 @@ void elect()
         */
     //
     current_process->status = PROCESS_RUNNING;
-
-
+#endif
 }
 
 void sys_yield() 
@@ -201,46 +248,57 @@ void sys_yield()
 
 void do_sys_yield(uint32_t * sp_param_base) 
 {
+#if CFS
+	//On met à jour le temps d'exécution
+	current_process->execution_time += (get_date_ms() - change_time);
+#endif
 
-    // save lr_user and sp_user
-    __asm("cps #31"); // Mode système
-    __asm("mov %0, lr" : "=r"(current_process->lr_user));
-    __asm("mov %0, sp" : "=r"(current_process->sp));
-    __asm("cps #19"); // Retour au mode SVC
-
-    // Sauvegarde de spsr dans current_process
-    __asm("mrs %0, spsr" : "=r"(current_process->cpsr));
-
-    // save context into the current_process struct
-    int i;
-    for (i = 0; i < 13 ; i++) {
-        current_process->regs[i] = *(sp_param_base + i);
-    }
-    // Sauvegarde du LR_SVC
-    current_process->lr_svc = *(sp_param_base + 13);
-
-
-    //changement de proccess
-    current_process->status = PROCESS_WAITING;
-    elect();
-
-
-    // retrieve lr_user and sp_user
-    __asm("cps #31"); // Mode système
-    __asm("mov lr, %0" : : "r"(current_process->lr_user));
-    __asm("mov sp, %0" : : "r"(current_process->sp));
-    __asm("cps #19"); // Retour au mode SVC
-
-    // On met le cpsr du current process dans spsr
-    __asm("msr spsr, %0" : : "r"(current_process->cpsr));
-
-    // retreive data from current_process struct into context
-    for (i = 0; i < 13 ; i++) {
-        *(sp_param_base + i) = current_process->regs[i];
-    }
-    // Restitution du LR_SVC
-    *(sp_param_base + 13) = current_process->lr_svc;
-
+	// save lr_user and sp_user
+	__asm("cps #31"); // Mode système
+	__asm("mov %0, lr" : "=r"(current_process->lr_user)); 
+	__asm("mov %0, sp" : "=r"(current_process->sp));  
+	__asm("cps #19"); // Retour au mode SVC
+	
+	// Sauvegarde de spsr dans current_process
+	__asm("mrs %0, spsr" : "=r"(current_process->cpsr));
+	 
+	// save context into the current_process struct
+	int i;
+	for (i = 0; i < 13 ; i++) {
+		current_process->regs[i] = *(sp_param_base + i);
+	}
+	// Sauvegarde du LR_SVC
+	current_process->lr_svc = *(sp_param_base + 13);
+	
+	
+	//changement de proccess
+	elect();
+	
+		
+	// retrieve lr_user and sp_user
+	__asm("cps #31"); // Mode système
+	__asm("mov lr, %0" : : "r"(current_process->lr_user)); 
+	__asm("mov sp, %0" : : "r"(current_process->sp));  
+	__asm("cps #19"); // Retour au mode SVC
+	
+	// On met le cpsr du current process dans spsr
+	__asm("msr spsr, %0" : : "r"(current_process->cpsr));
+	
+	// retreive data from current_process struct into context
+	for (i = 0; i < 13 ; i++) {
+		*(sp_param_base + i) = current_process->regs[i];
+	}
+	// Restitution du LR_SVC
+	*(sp_param_base + 13) = current_process->lr_svc;
+	
+#if CFS
+	//On enregistre la date de changement
+	change_time=get_date_ms();
+	
+	//Le temps donné est égal au temps d'attente divisé par le nombre de processus en attente.
+	next_tick = (change_time - current_process->execution_time - current_process->arrival_time);
+	next_tick = divide(next_tick,cfs_tree.nb_node + 1);
+#endif
 }
 
 int sys_exit(int status) 
@@ -255,10 +313,13 @@ int sys_exit(int status)
 
 void do_sys_exit(uint32_t * sp_param_base)
 {	
-
-    //récupération du statut
-    current_process->return_code = *(sp_param_base + 1);
-    current_process->status = PROCESS_TERMINATED;
+    //Le processus est terminé et récupération du statut
+	current_process->status = PROCESS_TERMINATED;
+    
+#if CFS
+	current_process->return_code = *(sp_param_base + 1);
+#endif
+    
     // Changement de process
     elect();
 
@@ -278,7 +339,6 @@ void do_sys_exit(uint32_t * sp_param_base)
     }
     // Restitution du LR_SVC
     *(sp_param_base + 13) = current_process->lr_svc;
-
 }
 
 void sys_yieldto(struct pcb_s * dest)

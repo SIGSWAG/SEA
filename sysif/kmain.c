@@ -7,8 +7,6 @@
 #include "uart.h"
 #include "pwm.h"
 
-
-
 void serialReceiver()
 {
 	//	uart_send_str("-----------user_process1\n");
@@ -173,7 +171,14 @@ kmain(void){
 
 
     while(1) {
+#if CFS
+		volatile int i;
+		i=0;
+		i++;
+#else
         sys_yield();
+#endif
+        
     }
 	//	uart_send_str("-----------user_process1\n");
 
