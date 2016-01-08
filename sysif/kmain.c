@@ -16,22 +16,34 @@ void serialReceiver()
 		switch(msg[0]){
 			case 'L':
 				// Left
-				break
+				break;
 			case 'R':
 				// Right
-				break
+				break;
 			case 'U':
 				// Up
-				break
+				break;
 			case 'D':
 				// Down
-				break
+				break;
 			case 'F':
 				// Forward
-				break
+				break;
 			case 'B':
 				// Backward
-				break
+				break;
+			case '+':
+				// Circle clockwise
+				break;
+			case '-':
+				// Circle counterclockwise
+				break;
+			case 'I':
+				// FistClosed
+				break;
+			case 'O':
+				// FistOpened
+				break;
 		}
 	}
 }
