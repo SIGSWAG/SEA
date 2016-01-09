@@ -174,13 +174,17 @@ class LeapMotionForMusicListener(Leap.Listener):
                         if (frame.timestamp - self._last_frame_timestamp) > self._temporisation: # if delay is more than tempo
                             self._serial.write(message)
                             self._last_frame_timestamp = frame.timestamp
+                            self._last_messages = messages
                     else:
                         self._serial.write(message)
                         self._last_frame_timestamp = frame.timestamp
-            self._last_messages = messages
+                        self._last_messages = messages
+
 
         # Get gestures
-        for gesture in frame.gestures():
+        if len(frame.gestures()):
+            gesture = frame.gestures()[0]
+        # for gesture in frame.gestures():
             if gesture.type == Leap.Gesture.TYPE_SWIPE:
                 swipe = SwipeGesture(gesture)
             if gesture.type == Leap.Gesture.TYPE_CIRCLE:
