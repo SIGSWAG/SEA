@@ -22,7 +22,8 @@ divide(uint64_t x, uint64_t y) {
 uint64_t
 get_date_ms()
 {
-#if RPI
+//noter
+#if 1
     uint32_t date_lowbits = Get32(CLO);
     uint64_t date_highbits = (uint64_t) Get32(CHI);
     uint64_t date = divide(((date_highbits << 32) | date_lowbits), SYS_TIMER_CLOCK_div_1000);

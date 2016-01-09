@@ -10,4 +10,6 @@
 
 #define IRQS_ACTIVEES 1
 
+#define CFS 0
+
 #endif

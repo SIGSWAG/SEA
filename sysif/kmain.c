@@ -7,36 +7,64 @@
 #include "uart.h"
 #include "pwm.h"
 
-
-
 void serialReceiver()
 {
-    while(1){
-            char msg[2];
-            // bloquant mais attente non active
-            uart_receive_str(msg, 2);
-            // detection du caractere reçu
-            switch(msg[0]){
-                    case 'L':
-                            // Left
-                            break;
-                    case 'R':
-                            // Right
-                            break;
-                    case 'U':
-                            // Up
-                            break;
-                    case 'D':
-                            // Dow;n
-                            break;
-                    case 'F':
-                            // Forward
-                            break;
-                    case 'B':
-                            // Backward
-                            break;
-            }
-    }
+	//	uart_send_str("-----------user_process1\n");
+	while(1){
+		char msg[2];
+		// bloquant mais attente non active
+		uart_receive_str(msg, 2);
+		// detection du caractere reçu
+		switch(msg[0]){
+			case 'L':
+				// Left
+				break;
+			case 'R':
+				// Right
+				// Accelerer
+				augmenter_vitesse();
+				break;
+			case 'U':
+				// Up
+				// Ralentir
+				diminuer_vitesse();
+				break;
+			case 'D':
+				// Down
+				break;
+			case 'F':
+				// Forward
+				break;
+			case 'B':
+				// Backward
+				break;
+			case '+':
+				// Circle clockwise
+				// Monter le son
+				augmenter_volume();
+				break;
+			case '-':
+				// Circle counterclockwise
+				// Baisser le son
+				diminuer_volume();
+				break;
+			case 'I':
+				// FistClosed
+				// Play / pause
+				if(musique_est_arretee()){
+					musique_lecture();
+				}
+				else{
+					musique_pause();
+				}
+				break;
+			case 'O':
+				// FistOpened
+				break;
+			default:
+				break;
+		}
+	}
 }
 
 
@@ -120,13 +148,20 @@ void user_process3()
     }
 }
 
+void print_boot_message() {
+	uart_send_str(" _       __________    __________  __  _________ \n| |     / / ____/ /   / ____/ __ \\/  |/  / ____/ \n| | /| / / __/ / /   / /   / / / / /|_/ / __/ \n| |/ |/ / /___/ /___/ /___/ /_/ / /  / / /___  \n|__/|__/_____/_____/\\____/\\____/_/  /_/_____/ \n\n");
+    uart_send_str("ssOS booting ...\nLoading the greatness ...\nPowered by SIGSWAG Ltd. Check us out on www.sigswag.com !\n");
+    uart_send_str("              ____  _____ \n   __________/ __ \\/ ___/\n  / ___/ ___/ / / /\\__ \\ \n (__  |__  ) /_/ /___/ / \n/____/____/\\____//____/ \n\n"); 
+                                                                  
+}
+
 
 void
 kmain(void){
 
     /** Exemple de sortie console **/
     uart_init();
-    uart_send_str("hello\n");
+    print_boot_message();
     hw_init();
     sched_init();
 
@@ -148,7 +183,14 @@ kmain(void){
 
 
     while(1) {
+#if CFS
+		volatile int i;
+		i=0;
+		i++;
+#else
         sys_yield();
+#endif
+        
     }
 	//	uart_send_str("-----------user_process1\n");
 

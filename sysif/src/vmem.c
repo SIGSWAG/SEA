@@ -5,7 +5,7 @@
 #include "syscall.h"
 #include "free_list_utils.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 
 #define BEGIN_IO_MAPPED_MEM 0x20000000

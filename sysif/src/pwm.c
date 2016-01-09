@@ -255,10 +255,32 @@ musique_est_prete(void)
     return musique_prete;
 }
 
-void
+static void
 set_increment_musique(int increment)
 {
-    increment_div_1000 = increment;
+    if(increment >= 300 && increment <= 3000){
+        increment_div_1000 = increment;
+    }
+}
+
+void
+augmenter_vitesse(void){
+    if(increment_div_1000 >= 1000){
+        set_increment_musique(increment_div_1000 + 300);
+    }
+    else{
+        set_increment_musique(increment_div_1000 + 30);
+    }
+}
+
+void
+diminuer_vitesse(void){
+    if(increment_div_1000 > 1000){
+        set_increment_musique(increment_div_1000 - 300);
+    }
+    else{
+        set_increment_musique(increment_div_1000 - 30);
+    }
 }
 
 void

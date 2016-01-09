@@ -19,6 +19,7 @@
 typedef int (func_t) (void);
 
 struct pcb_s * current_process;
+uint32_t next_tick;
 
 struct block {
 
@@ -48,6 +49,10 @@ struct pcb_s {
     struct block* first_empty_block_heap;
     int** allocated_adresses;
     int allocated_adresses_size;
+    
+    //pour le CFS
+	uint64_t execution_time;
+	uint64_t arrival_time;
 };
 
 

@@ -9,10 +9,11 @@ void configuration_audio(void);
 void musique_pause(void);
 void musique_stop(void);
 void musique_lecture(void);
-void set_increment_musique(int increment);
 void set_volume(int volume);
 void augmenter_volume(void);
 void diminuer_volume(void);
+void augmenter_vitesse(void);
+void diminuer_vitesse(void);
 
 unsigned int musique_est_arretee(void);
 unsigned int musique_est_prete(void);
