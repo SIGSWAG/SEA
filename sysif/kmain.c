@@ -3,7 +3,13 @@
 #include "sched.h"
 #include "hw.h"
 #include "asm_tools.h"
-#include "uart.h"
+#include "pwm.h"
+
+void
+play_music()
+{
+	lance_audio();
+}
 
 void serialReceiver()
 {
@@ -19,9 +25,13 @@ void serialReceiver()
 				break;
 			case 'R':
 				// Right
+				// Accelerer
+				augmenter_vitesse();
 				break;
 			case 'U':
 				// Up
+				// Ralentir
+				diminuer_vitesse();
 				break;
 			case 'D':
 				// Down
@@ -34,35 +44,51 @@ void serialReceiver()
 				break;
 			case '+':
 				// Circle clockwise
+				// Monter le son
+				augmenter_volume();
 				break;
 			case '-':
 				// Circle counterclockwise
+				// Baisser le son
+				diminuer_volume();
 				break;
 			case 'I':
 				// FistClosed
+				// Play / pause
+				if(musique_est_arretee()){
+					musique_lecture();
+				}
+				else{
+					musique_pause();
+				}
 				break;
 			case 'O':
 				// FistOpened
+				break;
+			default:
 				break;
 		}
 	}
 }
 
 void
-kmain(void){
+kmain(void)
+{
+	
+	hw_init();
 	sched_init();
 	
-	uart_init();
-	
+	create_process((func_t*) &play_music);
 	create_process((func_t*) &serialReceiver);
-	/*
-	timer_init();
+	
 	// Activation des interruptions
-	ENABLE_IRQ();
-	*/	
+#ifdef IRQS_ACTIVEES
+		timer_init();
+		ENABLE_IRQ();		
+#endif
 	
 	__asm("cps 0x10"); // switch CPU to USER mode
-	
+
 	while(1) {
 		sys_yield();
 	}

@@ -116,6 +116,7 @@ void led_on(void);
 void led_off(void);
 void led_switch(void);
 void led_blink(void);
+void led_init(void);
 
 void hw_init();
 void terminate_kernel();
