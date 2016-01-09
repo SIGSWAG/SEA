@@ -148,18 +148,19 @@ void
 kmain(void){
 
     /** Exemple de sortie console **/
-    uart_init();
-    print_boot_message();
     hw_init();
+    print_boot_message();
     sched_init();
 
     create_process((func_t*) &user_process1);
     //create_process((func_t*) &user_process2);
     create_process((func_t*) &user_process3);
 
+#ifdef IRQS_ACTIVEES
     timer_init();
     // Activation des interruptions
     ENABLE_IRQ();
+#endif
 
     __asm("cps 0x10"); // switch CPU to USER mode
 
