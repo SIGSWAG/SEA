@@ -22,6 +22,8 @@ void serialReceiver()
 		switch(msg[0]){
 			case 'L':
 				// Left
+                // Ralentir
+                diminuer_vitesse();
 				break;
 			case 'R':
 				// Right
@@ -30,8 +32,6 @@ void serialReceiver()
 				break;
 			case 'U':
 				// Up
-				// Ralentir
-				diminuer_vitesse();
 				break;
 			case 'D':
 				// Down
@@ -78,8 +78,8 @@ kmain(void)
 	hw_init();
 	sched_init();
 	
+    create_process((func_t*) &serialReceiver);
 	create_process((func_t*) &play_music);
-	create_process((func_t*) &serialReceiver);
 	
 	// Activation des interruptions
 #ifdef IRQS_ACTIVEES
