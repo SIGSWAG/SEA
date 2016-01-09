@@ -10,7 +10,7 @@ static uint32_t lr_irq;
 
 void __attribute__((naked)) irq_handler() {
 
-    __asm("stmfd sp!, {r0-r12, lr}");
+     __asm("stmfd sp!, {r0-r12, lr}");
      __asm("mov %0, sp" : "=r"(sp_param_base));
      __asm("mov %0, lr" : "=r"(lr_irq));
      __asm("mov r4, %0"::"r"(sp_param_base+13));

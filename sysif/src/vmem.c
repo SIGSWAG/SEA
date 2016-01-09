@@ -208,7 +208,7 @@ unsigned int * init_table_page()
             /** Pour chaque entrée dans cette table **/
             for(unsigned int j = 0; j < SECON_LVL_TT_COUNT; j++){
 
-                if( 1>3 && (i<<10|j) >= kernel_heap_begin && !DEBUG){ //la page est au dela du début du heap, faute de traduction WARNING DEBUG
+                if((i<<10|j) >= kernel_heap_begin){ //la page est au dela du début du heap, faute de traduction WARNING DEBUG
 
                         table2[j]=0x0;
 
