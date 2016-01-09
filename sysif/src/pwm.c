@@ -5,6 +5,7 @@
 
 extern char _binary_tune_wav_start;
 extern char _binary_tune_wav_end;
+
 /*
 static char* array_binary_music_wav_start = {_binary_tune_wav_start};
 static char* array_binary_music_wav_end = {_binary_tune_wav_end};
@@ -14,8 +15,8 @@ static volatile unsigned* clk = (void*)CLOCK_BASE;
 static volatile unsigned* pwm = (void*)PWM_BASE;
 
 static int compteur_incrementation = 0;
-static unsigned int increment_div_1000 = 1570; // contrôle la vitesse de lecture increment/1000 => astuce pour éviter les divisions 
-static unsigned int indice_volume = 0; // contrôle le volume (de 0 à 4) 
+static unsigned int increment_div_1000 = 2300; // contrôle la vitesse de lecture increment/1000 => astuce pour éviter les divisions 
+static unsigned int indice_volume = NOMBRE_DE_NIVEAUX_VOLUME_MIN; 
 
 static unsigned long long position_lecture_musique = 0;
 static unsigned int musique_arretee = 0;
@@ -128,9 +129,10 @@ audio_init(void)
     longueur_piste_audio = &_binary_tune_wav_end - &_binary_tune_wav_start;
 
     unsigned int range = 0x400;
+    // unsigned int range = 0x488;
     unsigned int idiv = 2;
     unsigned int fdiv = 512;
-    /* unsigned int pwmFrequency = (19200000 / idiv) / range; */
+    /* unsigned int pwmFrequency = (19 200 000 / idiv) / range; */
 
     SET_GPIO_ALT(40, 0);
     SET_GPIO_ALT(45, 0);
@@ -140,11 +142,12 @@ audio_init(void)
     *(clk + BCM2835_PWMCLK_DIV)  = PM_PASSWORD | (idiv<<12) | fdiv;  // set divisor
     *(clk + BCM2835_PWMCLK_CNTL) = PM_PASSWORD | 16 | 1;      // enable + oscillator (raspbian has this as plla)
 
+
     pause_physique(2); 
 
     // disable PWM
     *(pwm + BCM2835_PWM_CONTROL) = 0;
-       
+    
     pause_physique(2);
 
     *(pwm+BCM2835_PWM0_RANGE) = range;
@@ -259,28 +262,28 @@ musique_est_prete(void)
 static void
 set_increment_musique(int increment)
 {
-    if(increment >= 300 && increment <= 3000){
+    if(increment >= 300 && increment < 5000 ){
         increment_div_1000 = increment;
     }
 }
 
 void
 augmenter_vitesse(void){
-    if(increment_div_1000 >= 1000){
-        set_increment_musique(increment_div_1000 + 300);
+    if(increment_div_1000 >= 2300){
+        set_increment_musique(increment_div_1000 + 100);
     }
     else{
-        set_increment_musique(increment_div_1000 + 30);
+        set_increment_musique(increment_div_1000 + 80);
     }
 }
 
 void
 diminuer_vitesse(void){
-    if(increment_div_1000 > 1000){
-        set_increment_musique(increment_div_1000 - 300);
+    if(increment_div_1000 > 2300){
+        set_increment_musique(increment_div_1000 - 100);
     }
     else{
-        set_increment_musique(increment_div_1000 - 30);
+        set_increment_musique(increment_div_1000 - 80);
     }
 }
 

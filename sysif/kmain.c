@@ -8,52 +8,34 @@
 void
 play_music()
 {
-	lance_audio();
+    lance_audio();
 }
 
 void serialReceiver()
 {
-	//	uart_send_str("-----------user_process1\n");
-	while(1){
-		char msg[2];
-		// bloquant mais attente non active
-		uart_receive_str(msg, 2);
-		// detection du caractere reçu
-		switch(msg[0]){
-			case 'L':
-				// Left
+    //  uart_send_str("-----------user_process1\n");
+    while(1){
+        char msg[2];
+        // bloquant mais attente non active
+        uart_receive_str(msg, 2);
+        // detection du caractere reçu
+        switch(msg[0]){
+            case 'L':
+                // Left
                 // Ralentir
                 diminuer_vitesse();
-				break;
-			case 'R':
-				// Right
-				// Accelerer
-				augmenter_vitesse();
-				break;
-			case 'U':
-				// Up
-				break;
-			case 'D':
-				// Down
-				break;
-			case 'F':
-				// Forward
-				break;
-			case 'B':
-				// Backward
-				break;
-			case '+':
-				// Circle clockwise
-				// Monter le son
-				augmenter_volume();
-				break;
-			case '-':
-				// Circle counterclockwise
-				// Baisser le son
-				diminuer_volume();
-				break;
-			case 'I':
-				// FistClosed
+                break;
+            case 'R':
+                // Right
+                // Accelerer
+                augmenter_vitesse();
+                break;
+            case 'U':
+                // Up
+                musique_stop();
+                break;
+            case 'D':
+                // Down
 				// Play / pause
 				if(musique_est_arretee()){
 					musique_lecture();
@@ -61,6 +43,25 @@ void serialReceiver()
 				else{
 					musique_pause();
 				}
+                break;
+            case 'F':
+                // Forward
+                break;
+            case 'B':
+                // Backward
+                break;
+            case '+':
+                // Circle clockwise
+                // Monter le son
+                augmenter_volume();
+                break;
+            case '-':
+                // Circle counterclockwise
+                // Baisser le son
+                diminuer_volume();
+                break;
+            case 'I':
+                // FistClosed
 				break;
 			case 'O':
 				// FistOpened
