@@ -12,7 +12,44 @@ static uint32_t lr_irq;
 
 void __attribute__((naked)) irq_handler() {
 
-    __asm("mov %0, lr" : "=r"(lr_irq));
+     __asm("stmfd sp!, {r0-r12, lr}");
+     __asm("mov %0, sp" : "=r"(sp_param_base));
+     __asm("mov %0, lr" : "=r"(lr_irq));
+     __asm("mov r4, %0"::"r"(sp_param_base+13));
+     __asm("str %0, [r4]"::"r"(lr_irq-4));
+
+     __asm("mov %0, sp" : "=r"(sp_param_base));
+     __asm("cps #19");
+
+    // On configure la MMU avec la table des pages système
+    invalidate_TLB();
+    configure_mmu_kernel();
+
+    // Changement de contexte
+    do_sys_yield(sp_param_base);
+
+    __asm("cps #18"); //on repasse en mode IRQ
+    // On réarme le timer + active les interruptions
+    set_next_tick_default();
+    ENABLE_TIMER_IRQ();
+    ENABLE_IRQ();
+
+    invalidate_TLB();
+    configure_mmu_C((unsigned int)current_process->page_table);
+
+
+    // Restitution du contexte
+    __asm("ldmfd sp!, {r0-r12}");
+    // On récupère lr_irq (on l'a pushé avant)
+    __asm("pop {%0}" : "=r"(lr_irq));
+    // Switch to user
+    __asm("cps 0x10");
+    // On jump au lr_irq (décrémenté de 4 avant)
+    __asm("mov pc, %0": :"r"(lr_irq));
+
+
+    //Former code
+    /**__asm("mov %0, lr" : "=r"(lr_irq));
 
     // Switch to SVC
     __asm("cps 0x13");
@@ -52,7 +89,7 @@ void __attribute__((naked)) irq_handler() {
     // Switch to user
     __asm("cps 0x10");
     // On jump au lr_irq (décrémenté de 4 avant)
-    __asm("mov pc, %0": :"r"(lr_irq));
+    __asm("mov pc, %0": :"r"(lr_irq));*/
 }
 
 void __attribute__((naked)) swi_handler() {

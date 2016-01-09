@@ -112,7 +112,6 @@ void
 kFree(uint8_t* ptr, unsigned int size)
 {
 	register struct fl* cfl = (struct fl*) ptr;
-
 	cfl->size = (size + 3) & ~3;
 	cfl->next = freelist;
 	freelist = cfl;

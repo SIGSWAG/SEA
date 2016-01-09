@@ -47,6 +47,9 @@ void serialReceiver()
 void user_process1(){
 
     int v1 = 5;
+    int* alloc = (int*) gmalloc(sizeof(int)*4);
+
+    alloc[2] = 54321;
     /**int* alloc = (int*) sys_mmap();
     int* alloc2 = (int*) sys_mmap();
     alloc[0] = 1337;
@@ -94,12 +97,21 @@ void user_process3()
 	
     int* alloc = (int*) gmalloc(sizeof(int)*4);
     int* alloc2 = (int*) gmalloc(sizeof(int)*4);
-    alloc[0] = 1337;
+    int* alloc3 = (int*) gmalloc(sizeof(int)*4);
+    int* alloc4 = (int*) gmalloc(sizeof(int)*4095);
     alloc2[0] = 12345;
+    gfree((void*)alloc2);
+    int* alloc5 = (int*) gmalloc(sizeof(int)*5);
+    int* alloc6 = (int*) gmalloc(sizeof(int)*4);
+    alloc[0] = 1337;
+    alloc3[0] = 12345;
+    alloc4[0] = 1337;
+    alloc5[0] = 1337;
+    alloc6[0] = 1337;
 
-
+    gfree((void*)alloc4);
     gfree((void*)alloc);
-    alloc = (int*) gmalloc(4096);
+    alloc = (int*) gmalloc(25);
 
 
     int v3 = 0;
