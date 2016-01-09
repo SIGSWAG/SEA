@@ -11,22 +11,18 @@ class SerialController(serial.Serial):
 
     def open(self):
         if self.testing:
-            print "Testing : "
+            print "--- --- Testing Mode --- ---"
         else:
             super(SerialController, self).open()
         print "Serial communication oppened at port %s with baudrate at %d" % (self.portstr, self.baudrate)
 
     def close(self):
-        if self.testing:
-            print "Testing : "
-        else:
-            super(SerialController, self).open()
+        if self.testing == False:
+            super(SerialController, self).close()
         print "Serial communication closed"
 
     def write(self, string):
-        if self.testing:
-            print "Testing : "
-        else:
+        if self.testing == False:
             super(SerialController, self).write(self.messages_code[string])
         print "Message '%s' (%s) has been sent" % (self.messages_code[string], string)
 

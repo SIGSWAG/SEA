@@ -1,13 +1,14 @@
 import Leap, sys, thread, time
 import SEA
 
-PORT = 0
-BAUDRATE = 9400
+TESTING = False
+PORT = 'COM5'
+BAUDRATE = 9600				# bauds
 SWIPE_MINLENGTH = 100.0		# mm
-SWIPE_MINVELOCITy = 750		# mm/s
+SWIPE_MINVELOCITY = 750		# mm/s
 
 def main():
-	serialController = SEA.SerialController(testing=True);
+	serialController = SEA.SerialController(testing=TESTING);
 	serialController.port = PORT
 	serialController.baudrate = BAUDRATE
 	# Create a sample listener and controller
@@ -16,7 +17,7 @@ def main():
 
 	# Configure SwipeGesture detection
 	controller.config.set("Gesture.Swipe.MinLength", SWIPE_MINLENGTH)
-	controller.config.set("Gesture.Swipe.MinVelocity", SWIPE_MINVELOCITy)
+	controller.config.set("Gesture.Swipe.MinVelocity", SWIPE_MINVELOCITY)
 	controller.config.save()
 
 	# Have the sample listener receive events from the controller
