@@ -2,6 +2,8 @@
 #include "hw.h"
 #include "sched.h"
 #include "kheap.h"
+#include "syscall.h"
+
 
 extern char _binary_tune_wav_start;
 extern char _binary_tune_wav_end;
@@ -9,9 +11,6 @@ extern char _binary_tune_wav_end;
 static char* array_binary_music_wav_start = {_binary_tune_wav_start};
 static char* array_binary_music_wav_end = {_binary_tune_wav_end};
 */
-static volatile unsigned* gpio = (void*)GPIO_BASE;
-static volatile unsigned* clk = (void*)CLOCK_BASE;
-static volatile unsigned* pwm = (void*)PWM_BASE;
 
 static int compteur_incrementation = 0;
 static unsigned int increment_div_1000 = 1570; // contrôle la vitesse de lecture increment/1000 => astuce pour éviter les divisions 
@@ -28,16 +27,6 @@ static unsigned long long longueur_piste_audio;
 /*********************************************************************************************************
 Méthodes statiques
 *********************************************************************************************************/
-static void
-pause_physique(int t) {
-    // Pause for about t ms
-    int i;
-    for (;t>0;t--) {
-        for (i=5000;i>0;i--){
-            i++; i--;
-        }
-    }
-}
 
 static int
 divise(int x, int y) {
@@ -118,48 +107,8 @@ cree_niveaux_volumes(void)
 static void
 audio_init(void)
 {
-    /* Values read from raspbian: */
-    /* PWMCLK_CNTL = 148 = 10010100
-       PWMCLK_DIV = 16384
-       PWM_CONTROL=9509 = 10010100100101
-       PWM0_RANGE=1024
-       PWM1_RANGE=1024 */
-
     longueur_piste_audio = &_binary_tune_wav_end - &_binary_tune_wav_start;
-
-    unsigned int range = 0x400;
-    unsigned int idiv = 2;
-    /* unsigned int pwmFrequency = (19200000 / idiv) / range; */
-
-    SET_GPIO_ALT(40, 0);
-    SET_GPIO_ALT(45, 0);
-    pause_physique(2);
-
-    *(clk + BCM2835_PWMCLK_CNTL) = PM_PASSWORD | (1 << 5);    // stop clock
-    *(clk + BCM2835_PWMCLK_DIV)  = PM_PASSWORD | (idiv<<12);  // set divisor
-    *(clk + BCM2835_PWMCLK_CNTL) = PM_PASSWORD | 16 | 1;      // enable + oscillator (raspbian has this as plla)
-
-    pause_physique(2); 
-
-    // disable PWM
-    *(pwm + BCM2835_PWM_CONTROL) = 0;
-       
-    pause_physique(2);
-
-    *(pwm+BCM2835_PWM0_RANGE) = range;
-    *(pwm+BCM2835_PWM1_RANGE) = range;
-
-    *(pwm+BCM2835_PWM_CONTROL) =
-    BCM2835_PWM1_USEFIFO | // Use FIFO and not PWM mode
-    //          BCM2835_PWM1_REPEATFF |
-    BCM2835_PWM1_ENABLE  | // enable channel 1
-    BCM2835_PWM0_USEFIFO | // use FIFO and not PWM mode
-    //          BCM2835_PWM0_REPEATFF |  */
-    1<<6                 | // clear FIFO
-    BCM2835_PWM0_ENABLE;   // enable channel 0
-
-    pause_physique(2);
-
+    sys_audio_init();
     cree_niveaux_volumes();
 }
 
@@ -189,7 +138,7 @@ lance_audio(void)
 
     for(;;)
     {
-        // led_blink();
+//        led_blink();
         position_lecture_musique = 0;
         while (position_lecture_musique < longueur_piste_audio)
         {
@@ -200,10 +149,12 @@ lance_audio(void)
             }
 
             // gestion des erreurs (du status actuel de la fifo de son)
-            status =  *(pwm + BCM2835_PWM_STATUS);
+            status = sys_get_audio_status();// *(pwm + BCM2835_PWM_STATUS);
             if (!(status & BCM2835_FULL1))
             {
-                *(pwm+BCM2835_PWM_FIFO) = (char)(audio_data_volumes[indice_volume][(unsigned long long)position_lecture_musique]);
+                char a_lire = (char)(audio_data_volumes[indice_volume][(unsigned long long)position_lecture_musique]);
+                //*(pwm + BCM2835_PWM_FIFO) = a_lire;
+                sys_set_pwm_delta(a_lire, BCM2835_PWM_FIFO);
                 position_lecture_musique += get_incr();
             }
             else
@@ -218,7 +169,8 @@ lance_audio(void)
                 //                uart_print("error: ");
                 //                hexstring(status);
                 //                uart_print("\r\n");
-                *(pwm+BCM2835_PWM_STATUS) = ERRORMASK;
+                sys_set_pwm_delta(ERRORMASK, BCM2835_PWM_STATUS);
+                // *(pwm + BCM2835_PWM_STATUS) = ERRORMASK;
             }
         }
     }

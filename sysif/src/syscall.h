@@ -23,4 +23,17 @@ void do_sys_gettime();
 
 void irq_handler();
 
+void sys_audio_init();
+
+void do_sys_audio_init();
+
+
+long sys_get_audio_status();
+
+void do_sys_get_audio_status();
+
+void sys_set_pwm_delta(char value, int delta);
+
+void do_sys_set_pwm_delta();
+
 #endif

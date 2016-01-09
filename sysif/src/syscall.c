@@ -7,6 +7,21 @@
 static uint32_t * sp_param_base;
 static uint32_t lr_irq;
 
+static volatile unsigned* gpio = (void*)GPIO_BASE;
+static volatile unsigned* clk = (void*)CLOCK_BASE;
+static volatile unsigned* pwm = (void*)PWM_BASE;
+
+static void
+pause_physique(int t) {
+    // Pause for about t ms
+    int i;
+    for (;t>0;t--) {
+        for (i=5000;i>0;i--){
+            i++; i--;
+        }
+    }
+}
+
 void __attribute__((naked)) irq_handler() {
 	__asm("mov %0, lr" : "=r"(lr_irq));
 	
@@ -75,6 +90,15 @@ void __attribute__((naked)) swi_handler() {
 		case 8:
 			do_sys_wait(sp_param_base);
 			break;
+        case 13 :
+            do_sys_audio_init();
+            break;
+        case 14 :
+            do_sys_get_audio_status();
+            break;
+        case 15 :
+            do_sys_set_pwm_delta();
+            break;
 		default :
 			PANIC();
 	}
@@ -160,4 +184,99 @@ void do_sys_gettime() {
 	sp_param_base[0] = date_lowbits;
 	sp_param_base[1] = date_highbits; 
 
+}
+
+void
+sys_audio_init() 
+{
+    __asm("mov r0, #13");
+    __asm("SWI #0");
+}
+
+void
+do_sys_audio_init(uint32_t * sp_param_base)
+{
+    /* Values read from raspbian: */
+    /* PWMCLK_CNTL = 148 = 10010100
+       PWMCLK_DIV = 16384
+       PWM_CONTROL=9509 = 10010100100101
+       PWM0_RANGE=1024
+       PWM1_RANGE=1024 */
+
+    unsigned int range = 0x400;
+    unsigned int idiv = 2;
+//    unsigned int fdiv = 512; // freq = source / ( divi + divf / 1024)
+    /* unsigned int pwmFrequency = (19200000 / idiv) / range; */
+    SET_GPIO_ALT(40, 0);
+    SET_GPIO_ALT(45, 0);
+    pause_physique(2);
+
+    *(clk + BCM2835_PWMCLK_CNTL) = PM_PASSWORD | (1 << 5);    // stop clock
+    *(clk + BCM2835_PWMCLK_DIV)  = PM_PASSWORD | (idiv<<12) ;//| fdiv;  // set divisor
+    *(clk + BCM2835_PWMCLK_CNTL) = PM_PASSWORD | 16 | 1;      // enable + oscillator (raspbian has this as plla)
+    
+    pause_physique(2); 
+
+    // disable PWM
+    *(pwm + BCM2835_PWM_CONTROL) = 0;
+       
+    pause_physique(2);
+
+    *(pwm+BCM2835_PWM0_RANGE) = range;
+    *(pwm+BCM2835_PWM1_RANGE) = range;
+
+    *(pwm+BCM2835_PWM_CONTROL) =
+    BCM2835_PWM1_USEFIFO | // Use FIFO and not PWM mode
+    //          BCM2835_PWM1_REPEATFF |
+    BCM2835_PWM1_ENABLE  | // enable channel 1
+    BCM2835_PWM0_USEFIFO | // use FIFO and not PWM mode
+    //          BCM2835_PWM0_REPEATFF |  */
+    1<<6                 | // clear FIFO
+    BCM2835_PWM0_ENABLE;   // enable channel 0
+    
+    pause_physique(2);
+
+#ifdef IRQS_ACTIVEES
+    set_next_tick_default();
+    ENABLE_TIMER_IRQ();
+    ENABLE_IRQ();
+#endif
+}
+
+long
+sys_get_audio_status() {
+    __asm("mov r0, #14");
+    __asm("SWI #0");
+    long status = (long)(sp_param_base[0]);
+    return status;
+}
+
+void
+do_sys_get_audio_status() {
+    sp_param_base[0] = *(pwm + BCM2835_PWM_STATUS);
+#ifdef IRQS_ACTIVEES
+    set_next_tick_default();
+    ENABLE_TIMER_IRQ();
+    ENABLE_IRQ();
+#endif
+}
+
+void
+sys_set_pwm_delta(char value, int delta)
+{
+    __asm("mov r0, #15");
+    __asm("mov r1, %0" : : "r"(value));
+    __asm("mov r2, %0" : : "r"(delta));
+    __asm("SWI #0");
+}
+
+void do_sys_set_pwm_delta(){
+    char value = sp_param_base[1];
+    int delta = sp_param_base[2];
+    *(pwm + delta) = value;
+#ifdef IRQS_ACTIVEES
+    set_next_tick_default();
+    ENABLE_TIMER_IRQ();
+    ENABLE_IRQ();
+#endif
 }
