@@ -3,7 +3,7 @@ import SEA
 
 TESTING = False
 PORT = 'COM5'
-BAUDRATE = 9600				# bauds
+BAUDRATE = 115200			# bauds
 SWIPE_MINLENGTH = 100.0		# mm
 SWIPE_MINVELOCITY = 750		# mm/s
 
@@ -32,7 +32,6 @@ def main():
 	finally:
 		# Remove the sample listener when done
 		controller.remove_listener(listener)
-
 
 if __name__ == "__main__":
 	main()
