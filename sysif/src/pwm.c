@@ -43,7 +43,7 @@ pause_physique(int t) {
         }
     }
 }
-
+/*
 static int
 divise(int x, int y) {
     int quotient = 0;
@@ -64,6 +64,131 @@ divise(int x, int y) {
     }
     return quotient * coef;
 }
+*/
+
+
+// static void unsigned_divide(unsigned int dividend,
+//              unsigned int divisor,
+//              unsigned int* quotient,
+//              unsigned int* remainder )
+// {
+//   unsigned int t, num_bits;
+//   unsigned int q, bit, d;
+//   int i;
+
+//   *remainder = 0;
+//   *quotient = 0;
+
+//   if (divisor == 0)
+//     return;
+
+//   if (divisor > dividend) {
+//     *remainder = dividend;
+//     return;
+//   }
+
+//   if (divisor == dividend) {
+//     *quotient = 1;
+//     return;
+//   }
+
+//   num_bits = 32;
+
+//   while (*remainder < divisor) {
+//     bit = (dividend & 0x80000000) >> 31;
+//     *remainder = (*remainder << 1) | bit;
+//     d = dividend;
+//     dividend = dividend << 1;
+//     num_bits--;
+//   }
+
+
+//   /* The loop, above, always goes one iteration too far.
+//      To avoid inserting an "if" statement inside the loop
+//      the last iteration is simply reversed. */
+
+//   dividend = d;
+//   *remainder = *remainder >> 1;
+//   num_bits++;
+
+//   for (i = 0; i < num_bits; i++) {
+//     bit = (dividend & 0x80000000) >> 31;
+//     *remainder = (*remainder << 1) | bit;
+//     t = *remainder - divisor;
+//     q = !((t & 0x80000000) >> 31);
+//     dividend = dividend << 1;
+//     *quotient = (*quotient << 1) | q;
+//     if (q) {
+//        *remainder = t;
+//      }
+//   }
+// }  /* unsigned_divide */
+
+
+static unsigned divide(unsigned dividend, unsigned divisor) { 
+
+    unsigned denom=divisor;
+    unsigned current = 1;
+    unsigned answer=0;
+
+    if ( denom > dividend) 
+        return 0;
+
+    if ( denom == dividend)
+        return 1;
+
+    while (denom <= dividend) {
+        denom <<= 1;
+        current <<= 1;
+    }
+
+    denom >>= 1;
+    current >>= 1;
+
+    while (current!=0) {
+        if ( dividend >= denom) {
+            dividend -= denom;
+            answer |= current;
+        }
+        current >>= 1;
+        denom >>= 1;
+    }    
+    return answer;
+}
+
+
+#define ABS(x)  ((x) < 0 ? -(x) : (x))
+
+
+
+static int signed_divide(int dividend,
+           int divisor)
+{
+  unsigned int dend, dor;
+
+  dend = ABS(dividend);
+  dor  = ABS(divisor);
+  
+
+  /* the sign of the remainder is the same as the sign of the dividend
+     and the quotient is negated if the signs of the operands are
+     opposite */
+  int quotient = divide( dend, dor);
+  
+  if (dividend < 0) {
+    // int remainder = -r;
+    if (divisor > 0)
+      quotient = -quotient;
+  }
+  else { /* positive dividend */
+    // int remainder = r;
+    if (divisor < 0)
+      quotient = -quotient;
+  }
+    return quotient;  
+} /* signed_divide */
+
+
 
 static uint8_t
 get_min_uint8(char* data, unsigned int numero_musique)
@@ -118,10 +243,10 @@ cree_niveaux_volumes(void)
         for(; indice_dans_la_musique < playlist[j].longueur_piste_audio ; ++indice_dans_la_musique)
         {
             uint8_t actu = playlist[j].music_wav_start[indice_dans_la_musique];
-            uint8_t incr = (uint8_t)divise(110, NOMBRE_DE_NIVEAUX_VOLUME);
+            uint8_t incr = (uint8_t)signed_divide(110, NOMBRE_DE_NIVEAUX_VOLUME);
             for(i=0 ; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
             {
-                playlist[j].audio_data_volumes[i][indice_dans_la_musique] = actu + (uint8_t)divise( ((255 - incr*i - max)*(actu - min) - (min - incr*i)*(max - actu)), (max - min) );
+                playlist[j].audio_data_volumes[i][indice_dans_la_musique] = (uint8_t)((int)actu + signed_divide( ((255 - incr*i - max)*(actu - min) - (min - incr*i)*(max - actu)), (int)(max - min) ));
             }
         }
     }
