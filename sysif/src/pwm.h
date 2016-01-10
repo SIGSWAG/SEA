@@ -3,6 +3,7 @@
 
 #define NOMBRE_DE_NIVEAUX_VOLUME 10
 #define NOMBRE_DE_NIVEAUX_VOLUME_MIN 4
+#define LEAP_MOTION 0
 
 void lance_audio(void);
 void configuration_audio(void);

@@ -354,6 +354,20 @@ lance_audio(void)
     audio_init();
     musique_prete = 1;
     unsigned int musique_a_lire = musique_courante;
+    // on met en pause et on alume la led pour indiquer que on peut lancer la musique
+    if(LEAP_MOTION)
+    {
+        musique_arretee = 1;
+        led_on();
+        sys_wait(PROCESS_DETAILS_MUSIC_PAUSE);
+        led_off();
+    }
+    else
+    {
+        led_on();
+        sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
+        led_off();
+    }
 
     for(;;)
     {
