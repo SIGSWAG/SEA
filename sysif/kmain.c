@@ -46,9 +46,11 @@ void serialReceiver()
                 break;
             case 'F':
                 // Forward
+                musique_suivante();
                 break;
             case 'B':
                 // Backward
+                musique_precedente();
                 break;
             case '+':
                 // Circle clockwise

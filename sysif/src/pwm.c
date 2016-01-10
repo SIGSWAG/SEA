@@ -3,28 +3,23 @@
 #include "sched.h"
 #include "kheap.h"
 
-extern char _binary_tune_wav_start;
-extern char _binary_tune_wav_end;
+#define NB_MUSIQUES 2
+extern char _binary_prof_wav_start;
+extern char _binary_prof_wav_end;
+extern char _binary_star_wav_start;
+extern char _binary_star_wav_end;
 
-/*
-static char* array_binary_music_wav_start = {_binary_tune_wav_start};
-static char* array_binary_music_wav_end = {_binary_tune_wav_end};
-*/
+static unsigned int musique_courante = 0;
+static struct musique_infos playlist[NB_MUSIQUES];
+
 static volatile unsigned* gpio = (void*)GPIO_BASE;
 static volatile unsigned* clk = (void*)CLOCK_BASE;
 static volatile unsigned* pwm = (void*)PWM_BASE;
 
-static int compteur_incrementation = 0;
-static unsigned int increment_div_1000 = 2300; // contrôle la vitesse de lecture increment/1000 => astuce pour éviter les divisions 
 static unsigned int indice_volume = NOMBRE_DE_NIVEAUX_VOLUME_MIN; 
 
-static unsigned long long position_lecture_musique = 0;
 static unsigned int musique_arretee = 0;
 static unsigned int musique_prete = 0;
-
-char* audio_data = &_binary_tune_wav_start;
-static char* audio_data_volumes[NOMBRE_DE_NIVEAUX_VOLUME];
-static unsigned long long longueur_piste_audio;
 
 /*********************************************************************************************************
 Méthodes statiques
@@ -62,11 +57,11 @@ divise(int x, int y) {
 }
 
 static uint8_t
-get_min_uint8(char* data)
+get_min_uint8(char* data, unsigned int numero_musique)
 {
     uint8_t res = 255;
     unsigned long long i = 0;
-    for (; i < longueur_piste_audio; ++i)
+    for (; i < playlist[numero_musique].longueur_piste_audio; ++i)
     {
         if(data[i] < res)
         {
@@ -77,11 +72,11 @@ get_min_uint8(char* data)
 }
 
 static uint8_t
-get_max_uint8(char* data)
+get_max_uint8(char* data, unsigned int numero_musique)
 {
     uint8_t res = 0;
     unsigned long long i = 0;
-    for (; i < longueur_piste_audio; ++i)
+    for (; i < playlist[numero_musique].longueur_piste_audio; ++i)
     {
         if(data[i] > res)
         {
@@ -96,21 +91,29 @@ cree_niveaux_volumes(void)
 {
     // note : 0x80=128 = volume 0
     int i = 0;
-    for(; i<NOMBRE_DE_NIVEAUX_VOLUME ; i++)
+    int j = 0;
+    for(; j<NB_MUSIQUES ; ++j)
     {
-        audio_data_volumes[i] = (char*) kAlloc(sizeof(char) * longueur_piste_audio);
-    }
+        /*
+        uart_send_str("musique n°");
+        uart_send_int(j);
+*/
+        for(i=0; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
+        {
+            playlist[j].audio_data_volumes[i] = (char*) kAlloc(sizeof(char) * playlist[j].longueur_piste_audio);
+        }
     
-    uint8_t max = get_max_uint8(audio_data); 
-    uint8_t min = get_min_uint8(audio_data);
-    unsigned long long indice_dans_la_musique = 0;
-    for(; indice_dans_la_musique < longueur_piste_audio ; indice_dans_la_musique++)
-    {
-        uint8_t actu = audio_data[indice_dans_la_musique];
-        uint8_t incr = (uint8_t)divise(110, NOMBRE_DE_NIVEAUX_VOLUME);
-        for(i=0 ; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
-        {        
-            audio_data_volumes[i][indice_dans_la_musique] = actu + (uint8_t)divise( ((255 - incr*i - max)*(actu - min) - (min - incr*i)*(max - actu)), (max - min) );
+        uint8_t max = get_max_uint8(playlist[j].music_wav_start, j); 
+        uint8_t min = get_min_uint8(playlist[j].music_wav_start, j);
+        unsigned long long indice_dans_la_musique = 0;
+        for(; indice_dans_la_musique < playlist[j].longueur_piste_audio ; ++indice_dans_la_musique)
+        {
+            uint8_t actu = playlist[j].music_wav_start[indice_dans_la_musique];
+            uint8_t incr = (uint8_t)divise(110, NOMBRE_DE_NIVEAUX_VOLUME);
+            for(i=0 ; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
+            {
+                playlist[j].audio_data_volumes[i][indice_dans_la_musique] = actu + (uint8_t)divise( ((255 - incr*i - max)*(actu - min) - (min - incr*i)*(max - actu)), (max - min) );
+            }
         }
     }
 
@@ -125,8 +128,24 @@ audio_init(void)
        PWM_CONTROL=9509 = 10010100100101
        PWM0_RANGE=1024
        PWM1_RANGE=1024 */
+/*
+    uart_send_str("audio_init debut");*/
+    // initialisation
+    playlist[0].music_wav_start = &_binary_prof_wav_start;
+    playlist[0].music_wav_end = &_binary_prof_wav_end;
+    playlist[1].music_wav_start = &_binary_star_wav_start;
+    playlist[1].music_wav_end = &_binary_star_wav_end;
+    int i = 0;
+    for(; i<NB_MUSIQUES ; ++i)
+    {
+        playlist[i].longueur_piste_audio = playlist[i].music_wav_end - playlist[i].music_wav_start;
+        playlist[i].compteur_incrementation = 0;
+        playlist[i].increment_div_1000 = 2300;
+        playlist[i].position_lecture_musique = 0;
+        playlist[i].musique_arretee = 0;
+        playlist[i].musique_prete = 0;
+    }
 
-    longueur_piste_audio = &_binary_tune_wav_end - &_binary_tune_wav_start;
 
     unsigned int range = 0x400;
     // unsigned int range = 0x488;
@@ -164,17 +183,18 @@ audio_init(void)
 
     pause_physique(2);
 
+    // uart_send_str("audio_init avant creer volumes");
     cree_niveaux_volumes();
 }
 
 static int
-get_incr(void)
+get_incr(unsigned int musique_a_lire)
 {
     int res = 0;
-    compteur_incrementation += increment_div_1000;
-    while(compteur_incrementation > 1000)
+    playlist[musique_a_lire].compteur_incrementation += playlist[musique_a_lire].increment_div_1000;
+    while(playlist[musique_a_lire].compteur_incrementation > 1000)
     {
-        compteur_incrementation -= 1000;
+        playlist[musique_a_lire].compteur_incrementation -= 1000;
         res++;
     }
     return res;
@@ -190,12 +210,13 @@ lance_audio(void)
     long status;
     audio_init();
     musique_prete = 1;
+    unsigned int musique_a_lire = musique_courante;
 
     for(;;)
     {
         // led_blink();
-        position_lecture_musique = 0;
-        while (position_lecture_musique < longueur_piste_audio)
+        playlist[musique_a_lire].position_lecture_musique = 0;
+        while (playlist[musique_a_lire].position_lecture_musique < playlist[musique_a_lire].longueur_piste_audio)
         {
             // gestion de la pause et de l'arrêt
             if(musique_arretee)
@@ -207,8 +228,8 @@ lance_audio(void)
             status =  *(pwm + BCM2835_PWM_STATUS);
             if (!(status & BCM2835_FULL1))
             {
-                *(pwm+BCM2835_PWM_FIFO) = (char)(audio_data_volumes[indice_volume][(unsigned long long)position_lecture_musique]);
-                position_lecture_musique += get_incr();
+                *(pwm+BCM2835_PWM_FIFO) = (char)(playlist[musique_a_lire].audio_data_volumes[indice_volume][(unsigned long long)playlist[musique_a_lire].position_lecture_musique]);
+                playlist[musique_a_lire].position_lecture_musique += get_incr(musique_a_lire);
             }
             else
             {
@@ -224,6 +245,7 @@ lance_audio(void)
                 //                uart_print("\r\n");
                 *(pwm+BCM2835_PWM_STATUS) = ERRORMASK;
             }
+            musique_a_lire = musique_courante;
         }
     }
 }
@@ -244,7 +266,7 @@ void
 musique_stop(void)
 {
     musique_arretee = 1;
-    position_lecture_musique = 0;
+    playlist[musique_courante].position_lecture_musique = 0;
 }
 
 unsigned int
@@ -263,27 +285,27 @@ static void
 set_increment_musique(int increment)
 {
     if(increment >= 300 && increment < 5000 ){
-        increment_div_1000 = increment;
+        playlist[musique_courante].increment_div_1000 = increment;
     }
 }
 
 void
 augmenter_vitesse(void){
-    if(increment_div_1000 >= 2300){
-        set_increment_musique(increment_div_1000 + 100);
+    if(playlist[musique_courante].increment_div_1000 >= 2300){
+        set_increment_musique(playlist[musique_courante].increment_div_1000 + 100);
     }
     else{
-        set_increment_musique(increment_div_1000 + 80);
+        set_increment_musique(playlist[musique_courante].increment_div_1000 + 80);
     }
 }
 
 void
 diminuer_vitesse(void){
-    if(increment_div_1000 > 2300){
-        set_increment_musique(increment_div_1000 - 100);
+    if(playlist[musique_courante].increment_div_1000 > 2300){
+        set_increment_musique(playlist[musique_courante].increment_div_1000 - 100);
     }
     else{
-        set_increment_musique(increment_div_1000 - 80);
+        set_increment_musique(playlist[musique_courante].increment_div_1000 - 80);
     }
 }
 
@@ -312,6 +334,20 @@ diminuer_volume(void)
     {
         indice_volume++;
     }
+}
+
+void
+musique_suivante(void)
+{
+    musique_courante = (musique_courante >= NB_MUSIQUES-1) ? 0 : musique_courante+1;
+    playlist[musique_courante].position_lecture_musique = 0;
+}
+
+void
+musique_precedente(void)
+{
+    musique_courante = (musique_courante <= 0) ? NB_MUSIQUES-1 : musique_courante-1;
+    playlist[musique_courante].position_lecture_musique = 0;
 }
 
 void
