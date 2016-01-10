@@ -3,11 +3,20 @@
 #include "sched.h"
 #include "kheap.h"
 
-#define NB_MUSIQUES 2
-extern char _binary_prof_wav_start;
-extern char _binary_prof_wav_end;
-extern char _binary_star_wav_start;
-extern char _binary_star_wav_end;
+#define NB_MUSIQUES 6
+
+extern char _binary_mario_music_ghosts_wav_end;
+extern char _binary_mario_music_ghosts_wav_start;
+extern char _binary_mario_jump_wav_end;
+extern char _binary_mario_jump_wav_start;
+extern char _binary_mario_gameover_wav_end;
+extern char _binary_mario_gameover_wav_start;
+extern char _binary_mario_1UP_wav_end;
+extern char _binary_mario_1UP_wav_start;
+extern char _binary_mario_mushroom_wav_end;
+extern char _binary_mario_mushroom_wav_start;
+extern char _binary_mario_win_wav_end;
+extern char _binary_mario_win_wav_start;
 
 static unsigned int musique_courante = 0;
 static struct musique_infos playlist[NB_MUSIQUES];
@@ -131,10 +140,19 @@ audio_init(void)
 /*
     uart_send_str("audio_init debut");*/
     // initialisation
-    playlist[0].music_wav_start = &_binary_prof_wav_start;
-    playlist[0].music_wav_end = &_binary_prof_wav_end;
-    playlist[1].music_wav_start = &_binary_star_wav_start;
-    playlist[1].music_wav_end = &_binary_star_wav_end;
+    playlist[0].music_wav_end = &_binary_mario_music_ghosts_wav_end;
+    playlist[0].music_wav_start = &_binary_mario_music_ghosts_wav_start;
+    playlist[1].music_wav_end = &_binary_mario_jump_wav_end;
+    playlist[1].music_wav_start = &_binary_mario_jump_wav_start;
+    playlist[2].music_wav_end = &_binary_mario_gameover_wav_end;
+    playlist[2].music_wav_start = &_binary_mario_gameover_wav_start;
+    playlist[3].music_wav_end = &_binary_mario_1UP_wav_end;
+    playlist[3].music_wav_start = &_binary_mario_1UP_wav_start;
+    playlist[4].music_wav_end = &_binary_mario_mushroom_wav_end;
+    playlist[4].music_wav_start = &_binary_mario_mushroom_wav_start;
+    playlist[5].music_wav_end = &_binary_mario_win_wav_end;
+    playlist[5].music_wav_start = &_binary_mario_win_wav_start;
+
     int i = 0;
     for(; i<NB_MUSIQUES ; ++i)
     {
