@@ -22,9 +22,13 @@ class SerialController(serial.Serial):
         print "Serial communication closed"
 
     def write(self, string):
+        if not self.isOpen():
+            self.open()
         if self.testing == False:
+            self.flushOutput()
             super(SerialController, self).write(self.messages_code[string])
         print "Message '%s' (%s) has been sent" % (self.messages_code[string], string)
+        self.close()
 
 class LeapMotionForMusicListener(Leap.Listener):
     finger_names = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']
@@ -78,8 +82,8 @@ class LeapMotionForMusicListener(Leap.Listener):
 
 
     def on_init(self, controller):
-        if not self._serial.isOpen():
-            self._serial.open()
+        # if not self._serial.isOpen():
+        #    self._serial.open()
         print "Initialized"
 
     def on_connect(self, controller):
