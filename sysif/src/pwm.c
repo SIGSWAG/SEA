@@ -125,171 +125,144 @@ divise(int x, int y) {
 // }  /* unsigned_divide */
 
 
-static unsigned divide(unsigned dividend, unsigned divisor) { 
 
-    unsigned denom=divisor;
-    unsigned current = 1;
-    unsigned answer=0;
 
-    if ( denom > dividend) 
-        return 0;
+#if ENABLE_VOLUME
+    static unsigned divide(unsigned dividend, unsigned divisor) { 
 
-    if ( denom == dividend)
-        return 1;
+        unsigned denom=divisor;
+        unsigned current = 1;
+        unsigned answer=0;
 
-    while (denom <= dividend) {
-        denom <<= 1;
-        current <<= 1;
-    }
+        if ( denom > dividend) 
+            return 0;
 
-    denom >>= 1;
-    current >>= 1;
+        if ( denom == dividend)
+            return 1;
 
-    while (current!=0) {
-        if ( dividend >= denom) {
-            dividend -= denom;
-            answer |= current;
+        while (denom <= dividend) {
+            denom <<= 1;
+            current <<= 1;
         }
-        current >>= 1;
+
         denom >>= 1;
-    }    
-    return answer;
-}
+        current >>= 1;
 
-
-#define ABS(x)  ((x) < 0 ? -(x) : (x))
-
-
-
-static int signed_divide(int dividend,
-           int divisor)
-{
-  unsigned int dend, dor;
-
-  dend = ABS(dividend);
-  dor  = ABS(divisor);
-  
-
-  /* the sign of the remainder is the same as the sign of the dividend
-     and the quotient is negated if the signs of the operands are
-     opposite */
-  int quotient = divide( dend, dor);
-  
-  if (dividend < 0) {
-    // int remainder = -r;
-    if (divisor > 0)
-      quotient = -quotient;
-  }
-  else { /* positive dividend */
-    // int remainder = r;
-    if (divisor < 0)
-      quotient = -quotient;
-  }
-    return quotient;  
-} /* signed_divide */
-
-
-
-static uint8_t
-get_min_uint8(char* data, unsigned int numero_musique)
-{
-    uint8_t res = 255;
-    unsigned long long i = 0;
-    for (; i < playlist[numero_musique].longueur_piste_audio; ++i)
-    {
-        if(data[i] < res)
-        {
-            res = data[i];
-        }
+        while (current!=0) {
+            if ( dividend >= denom) {
+                dividend -= denom;
+                answer |= current;
+            }
+            current >>= 1;
+            denom >>= 1;
+        }    
+        return answer;
     }
-    return res;
-}
 
-static uint8_t
-get_max_uint8(char* data, unsigned int numero_musique)
-{
-    uint8_t res = 0;
-    unsigned long long i = 0;
-    for (; i < playlist[numero_musique].longueur_piste_audio; ++i)
-    {
-        if(data[i] > res)
-        {
-            res = data[i];
-        }
-    }
-    return res;
-}
+    #define ABS(x)  ((x) < 0 ? -(x) : (x))
 
-static void
-cree_niveaux_volumes(void)
-{
-    // note : 0x80=128 = volume 0
-    int i = 0;
-    int j = 0;
-    for(; j<NB_MUSIQUES ; ++j)
+    static int signed_divide(int dividend,
+               int divisor)
     {
-        /*
-        uart_send_str("musique n°");
-        uart_send_int(j);
-*/
-        for(i=0; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
+      unsigned int dend, dor;
+
+      dend = ABS(dividend);
+      dor  = ABS(divisor);
+      
+
+      /* the sign of the remainder is the same as the sign of the dividend
+         and the quotient is negated if the signs of the operands are
+         opposite */
+      int quotient = divide( dend, dor);
+      
+      if (dividend < 0) {
+        // int remainder = -r;
+        if (divisor > 0)
+          quotient = -quotient;
+      }
+      else { /* positive dividend */
+        // int remainder = r;
+        if (divisor < 0)
+          quotient = -quotient;
+      }
+        return quotient;  
+    } /* signed_divide */
+
+    static uint8_t
+    get_min_uint8(char* data, unsigned int numero_musique)
+    {
+        uint8_t res = 255;
+        unsigned long long i = 0;
+        for (; i < playlist[numero_musique].longueur_piste_audio; ++i)
         {
-            playlist[j].audio_data_volumes[i] = (char*) kAlloc(sizeof(char) * playlist[j].longueur_piste_audio);
-        }
-    
-        uint8_t max = get_max_uint8(playlist[j].music_wav_start, j); 
-        uint8_t min = get_min_uint8(playlist[j].music_wav_start, j);
-        unsigned long long indice_dans_la_musique = 0;
-        for(; indice_dans_la_musique < playlist[j].longueur_piste_audio ; ++indice_dans_la_musique)
-        {
-            uint8_t actu = playlist[j].music_wav_start[indice_dans_la_musique];
-            uint8_t incr = (uint8_t)signed_divide(110, NOMBRE_DE_NIVEAUX_VOLUME);
-            for(i=0 ; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
+            if(data[i] < res)
             {
-                playlist[j].audio_data_volumes[i][indice_dans_la_musique] = (uint8_t)((int)actu + signed_divide( ((255 - incr*i - max)*(actu - min) - (min - incr*i)*(max - actu)), (int)(max - min) ));
+                res = data[i];
+            }
+        }
+        return res;
+    }
+
+    static uint8_t
+    get_max_uint8(char* data, unsigned int numero_musique)
+    {
+        uint8_t res = 0;
+        unsigned long long i = 0;
+        for (; i < playlist[numero_musique].longueur_piste_audio; ++i)
+        {
+            if(data[i] > res)
+            {
+                res = data[i];
+            }
+        }
+        return res;
+    }
+    static void
+    cree_niveaux_volumes(void)
+    {
+        // note : 0x80=128 = volume 0
+        int i = 0;
+        int j = 0;
+        for(; j<NB_MUSIQUES ; ++j)
+        {
+            for(i=0; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
+            {
+                playlist[j].audio_data_volumes[i] = (char*) kAlloc(sizeof(char) * playlist[j].longueur_piste_audio);
+            }
+        
+            uint8_t max = get_max_uint8(playlist[j].music_wav_start, j); 
+            uint8_t min = get_min_uint8(playlist[j].music_wav_start, j);
+            unsigned long long indice_dans_la_musique = 0;
+            for(; indice_dans_la_musique < playlist[j].longueur_piste_audio ; ++indice_dans_la_musique)
+            {
+                uint8_t actu = playlist[j].music_wav_start[indice_dans_la_musique];
+                uint8_t incr = (uint8_t)signed_divide(110, NOMBRE_DE_NIVEAUX_VOLUME);
+                for(i=0 ; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
+                {
+                    playlist[j].audio_data_volumes[i][indice_dans_la_musique] = (uint8_t)((int)actu + signed_divide( ((255 - incr*i - max)*(actu - min) - (min - incr*i)*(max - actu)), (int)(max - min) ));
+                }
             }
         }
     }
-
-}
-
-static void
-audio_init(void)
-{
-    /* Values read from raspbian: */
-    /* PWMCLK_CNTL = 148 = 10010100
-       PWMCLK_DIV = 16384
-       PWM_CONTROL=9509 = 10010100100101
-       PWM0_RANGE=1024
-       PWM1_RANGE=1024 */
-/*
-    uart_send_str("audio_init debut");*/
-    // initialisation
-    playlist[0].music_wav_end = &_binary_mario_music_ghosts_wav_end;
-    playlist[0].music_wav_start = &_binary_mario_music_ghosts_wav_start;
-    playlist[1].music_wav_end = &_binary_mario_jump_wav_end;
-    playlist[1].music_wav_start = &_binary_mario_jump_wav_start;
-    playlist[2].music_wav_end = &_binary_mario_gameover_wav_end;
-    playlist[2].music_wav_start = &_binary_mario_gameover_wav_start;
-    playlist[3].music_wav_end = &_binary_mario_1UP_wav_end;
-    playlist[3].music_wav_start = &_binary_mario_1UP_wav_start;
-    playlist[4].music_wav_end = &_binary_mario_mushroom_wav_end;
-    playlist[4].music_wav_start = &_binary_mario_mushroom_wav_start;
-    playlist[5].music_wav_end = &_binary_mario_win_wav_end;
-    playlist[5].music_wav_start = &_binary_mario_win_wav_start;
-
-    int i = 0;
-    for(; i<NB_MUSIQUES ; ++i)
+#else
+    static void
+    cree_niveaux_volumes(void)
     {
-        playlist[i].longueur_piste_audio = playlist[i].music_wav_end - playlist[i].music_wav_start;
-        playlist[i].compteur_incrementation = 0;
-        playlist[i].increment_div_1000 = 2300;
-        playlist[i].position_lecture_musique = 0;
-        playlist[i].musique_arretee = 0;
-        playlist[i].musique_prete = 0;
+        int i = 0;
+        int j = 0;
+        for(; j<NB_MUSIQUES ; ++j)
+        {
+            for(i=0; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
+            {
+                playlist[j].audio_data_volumes[i] = playlist[j].music_wav_start;
+            }
+        }    
     }
+#endif
 
-
+void
+init_materiel(void)
+{
     unsigned int range = 0x400;
     // unsigned int range = 0x488;
     unsigned int idiv = 2;
@@ -325,8 +298,44 @@ audio_init(void)
     BCM2835_PWM0_ENABLE;   // enable channel 0
 
     pause_physique(2);
+}
 
-    // uart_send_str("audio_init avant creer volumes");
+static void
+audio_init(void)
+{
+    /* Values read from raspbian: */
+    /* PWMCLK_CNTL = 148 = 10010100
+       PWMCLK_DIV = 16384
+       PWM_CONTROL=9509 = 10010100100101
+       PWM0_RANGE=1024
+       PWM1_RANGE=1024 */
+
+    playlist[0].music_wav_end = &_binary_mario_music_ghosts_wav_end;
+    playlist[0].music_wav_start = &_binary_mario_music_ghosts_wav_start;
+    playlist[1].music_wav_end = &_binary_mario_jump_wav_end;
+    playlist[1].music_wav_start = &_binary_mario_jump_wav_start;
+    playlist[2].music_wav_end = &_binary_mario_gameover_wav_end;
+    playlist[2].music_wav_start = &_binary_mario_gameover_wav_start;
+    playlist[3].music_wav_end = &_binary_mario_1UP_wav_end;
+    playlist[3].music_wav_start = &_binary_mario_1UP_wav_start;
+    playlist[4].music_wav_end = &_binary_mario_mushroom_wav_end;
+    playlist[4].music_wav_start = &_binary_mario_mushroom_wav_start;
+    playlist[5].music_wav_end = &_binary_mario_win_wav_end;
+    playlist[5].music_wav_start = &_binary_mario_win_wav_start;
+
+    init_materiel();
+
+    int i = 0;
+    for(; i<NB_MUSIQUES ; ++i)
+    {
+        playlist[i].longueur_piste_audio = playlist[i].music_wav_end - playlist[i].music_wav_start;
+        playlist[i].compteur_incrementation = 0;
+        playlist[i].increment_div_1000 = 2300;
+        playlist[i].position_lecture_musique = 0;
+        playlist[i].musique_arretee = 0;
+        playlist[i].musique_prete = 0;
+    }
+
     cree_niveaux_volumes();
 }
 
@@ -354,24 +363,19 @@ lance_audio(void)
     audio_init();
     musique_prete = 1;
     unsigned int musique_a_lire = musique_courante;
-    // on met en pause et on alume la led pour indiquer que on peut lancer la musique
-    if(LEAP_MOTION)
-    {
-        musique_arretee = 1;
-        led_on();
-        sys_wait(PROCESS_DETAILS_MUSIC_PAUSE);
-        led_off();
-    }
-    else
-    {
-        led_on();
-        sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
-        led_off();
-    }
+#if LEAP_MOTION
+    musique_stop();
+    led_on();
+    sys_wait(PROCESS_DETAILS_MUSIC_PAUSE);
+    led_off();
+#else
+    led_on();
+    sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
+    led_off();
+#endif
 
     for(;;)
     {
-        // led_blink();
         playlist[musique_a_lire].position_lecture_musique = 0;
         while (playlist[musique_a_lire].position_lecture_musique < playlist[musique_a_lire].longueur_piste_audio)
         {

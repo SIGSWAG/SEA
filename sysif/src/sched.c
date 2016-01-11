@@ -326,7 +326,7 @@ void do_sys_wait(uint32_t * sp_param_base)
 	// Restitution du LR_SVC
 	*(sp_param_base + 13) = current_process->lr_svc;
 
-#ifdef IRQS_ACTIVEES
+#if IRQS_ACTIVEES
 	set_next_tick_default();
 	ENABLE_TIMER_IRQ();
 	ENABLE_IRQ();		

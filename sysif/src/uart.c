@@ -3,6 +3,7 @@
 #include "uart.h"
 #include "config.h"
 #include "sched.h"
+#include "hw.h"
 
 //
 // Constante des puissances de 10
@@ -182,8 +183,9 @@ int uart_receive_str(char *buffer, unsigned int n)
 	{
 		// On attend que se ne soit pas vide
 		//while ((Get32(UART_FR) & (1u << 4u)) != 0);
+		
 		sys_wait(PROCESS_DETAILS_WAITING_SERIAL);
-
+        
 		// Lecture du byte
 		byte = Get32(UART_DR) & 0xFFu;
 

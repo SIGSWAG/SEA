@@ -1,9 +1,10 @@
 #ifndef PWM_H
 #define PWM_H
 
+#define ENABLE_VOLUME 0
 #define NOMBRE_DE_NIVEAUX_VOLUME 10
 #define NOMBRE_DE_NIVEAUX_VOLUME_MIN 4
-#define LEAP_MOTION 0
+#define LEAP_MOTION 1
 
 void lance_audio(void);
 void configuration_audio(void);
@@ -20,6 +21,7 @@ unsigned int musique_est_arretee(void);
 unsigned int musique_est_prete(void);
 void musique_suivante(void);
 void musique_precedente(void);
+void init_materiel(void);
 
 
 struct musique_infos{

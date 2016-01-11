@@ -8,19 +8,19 @@
 void
 play_music()
 {
+
     lance_audio();
 }
 
 void serialReceiver()
 {
-    //  uart_send_str("-----------user_process1\n");
     while(1){
         char msg[2];
         // bloquant mais attente non active
         uart_receive_str(msg, 2);
         // detection du caractere reçu
         if(musique_est_arretee())
-        {  
+        {
             if(msg[0] == 'D')
             {
                 // Down
@@ -47,8 +47,8 @@ void serialReceiver()
                     break;
                 case 'D':
                     // Down
-    				// Pause
-    				musique_pause();
+                    // Pause
+                    musique_pause();
                     break;
                 case 'F':
                     // Forward
@@ -70,11 +70,15 @@ void serialReceiver()
                     break;
                 case 'I':
                     // FistClosed
-    				break;
-    			case 'O':
-    				// FistOpened
-    				break;
-    			default:
+                    // reinitialisation des periphs audio
+                    musique_stop();
+                    init_materiel();
+                    musique_lecture();
+                    break;
+                case 'O':
+                    // FistOpened
+                    break;
+                default:
     				break;
     		}
         }
@@ -92,7 +96,7 @@ kmain(void)
 	create_process((func_t*) &play_music);
 	
 	// Activation des interruptions
-#ifdef IRQS_ACTIVEES
+#if IRQS_ACTIVEES
 		timer_init();
 		ENABLE_IRQ();		
 #endif
