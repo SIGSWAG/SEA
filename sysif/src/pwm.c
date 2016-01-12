@@ -16,8 +16,6 @@ extern char _binary_mario_mushroom_wav_start;
 extern char _binary_mario_win_wav_end;
 extern char _binary_mario_win_wav_start;
 
-static unsigned int musique_courante = 0;
-static struct musique_infos playlist[NB_MUSIQUES];
 
 static volatile unsigned* gpio = (void*)GPIO_BASE;
 static volatile unsigned* clk = (void*)CLOCK_BASE;
@@ -27,6 +25,20 @@ static unsigned int indice_volume = NOMBRE_DE_NIVEAUX_VOLUME_MIN;
 
 static unsigned int musique_arretee = 0;
 static unsigned int musique_prete = 0;
+
+
+// MODES
+static unsigned int mode_musique = MUSIQUE_MODE_PLAYLIST;
+
+// Playlist
+static unsigned int musique_courante = 0;
+static struct musique_infos playlist[NB_MUSIQUES];
+
+// Parallel
+static unsigned int musique_fond = 0;   // l'index de la musique de fond
+static unsigned int musique_en_parallel_actif = 0;
+static unsigned int musique_en_parallel_index = -1; // l'index de la musique ponctuelle
+
 
 /*********************************************************************************************************
 Méthodes statiques
@@ -328,9 +340,11 @@ audio_init(void)
     {
         playlist[i].longueur_piste_audio = playlist[i].music_wav_end - playlist[i].music_wav_start;
         playlist[i].compteur_incrementation = 0;
-        playlist[i].increment_div_1000 = 2300;
+        playlist[i].increment_div_1000 = BASE_INCREMENT;
         playlist[i].position_lecture_musique = 0;
     }
+
+    musique_fond = &playlist[0];
 
     cree_niveaux_volumes();
 }
@@ -385,8 +399,41 @@ lance_audio(void)
             status =  *(pwm + BCM2835_PWM_STATUS);
             if (!(status & BCM2835_FULL1))
             {
-                *(pwm+BCM2835_PWM_FIFO) = (char)(playlist[musique_a_lire].audio_data_volumes[indice_volume][(unsigned long long)playlist[musique_a_lire].position_lecture_musique]);
-                playlist[musique_a_lire].position_lecture_musique += get_incr(musique_a_lire);
+                if(mode_musique == MUSIQUE_MODE_PARALLEL){
+                    //son de fond
+                    *(pwm+BCM2835_PWM_FIFO) = (char)(playlist[musique_a_lire].audio_data_volumes[indice_volume][(unsigned long long)playlist[musique_a_lire].position_lecture_musique]);
+                    playlist[musique_a_lire].position_lecture_musique += BASE_INCREMENT*2;
+
+                    //son ponctuel
+                    if(musique_en_parallel_actif && musique_en_parallel_index != -1){
+                        unsigned int musique_ponctuelle = musique_en_parallel_index;
+                        if ((status & ERRORMASK))
+                        {
+                            *(pwm+BCM2835_PWM_STATUS) = ERRORMASK;
+                        }
+                        if (playlist[musique_ponctuelle].position_lecture_musique < playlist[musique_ponctuelle].longueur_piste_audio)
+                        {
+                            if (!(status & BCM2835_FULL1)){ 
+                                /* on passe la main en attendant que (status & BCM2835_FULL1)=0 => pas plein
+                                (!=0 => plein) */
+                                sys_wait(PROCESS_DETAILS_WAITING_PWM_FIFO);
+                            }
+
+                            *(pwm+BCM2835_PWM_FIFO) = (char)(playlist[musique_ponctuelle].audio_data_volumes[indice_volume][(unsigned long long)playlist[musique_ponctuelle].position_lecture_musique]);
+                            playlist[musique_ponctuelle].position_lecture_musique += BASE_INCREMENT*2;
+                        }
+                        else{
+                            // fin de la musique ponctuelle
+                            playlist[musique_ponctuelle].position_lecture_musique = 0;
+                            musique_en_parallel_actif = 0;
+                            musique_en_parallel_index = -1;
+                        }
+                    }
+                }
+                else{
+                    *(pwm+BCM2835_PWM_FIFO) = (char)(playlist[musique_a_lire].audio_data_volumes[indice_volume][(unsigned long long)playlist[musique_a_lire].position_lecture_musique]);
+                    playlist[musique_a_lire].position_lecture_musique += BASE_INCREMENT*2;
+                }
             }
             else
             {
@@ -402,9 +449,14 @@ lance_audio(void)
                 //                uart_print("\r\n");
                 *(pwm+BCM2835_PWM_STATUS) = ERRORMASK;
             }
-            musique_a_lire = musique_courante;
+            if(mode_musique == MUSIQUE_MODE_PARALLEL){
+                musique_a_lire = musique_fond;
+            }
+            else{
+                musique_a_lire = musique_courante;
+            }
         }
-    }
+    } // music repeating
 }
 
 void
@@ -559,3 +611,26 @@ configuration_audio(void)
     }
 }
 
+unsigned int
+get_mode_musique(){
+    return mode_musique;
+}
+
+void
+set_mode_musique(unsigned int mode){
+    switch(mode){
+        case MUSIQUE_MODE_PARALLEL:
+            mode_musique = mode;
+            break;
+        case MUSIQUE_MODE_PLAYLIST:
+            mode_musique = mode;
+            break;
+    }
+}
+
+void
+play_ponctuel(unsigned int index){
+    musique_en_parallel_index = index; // l'index de la musique ponctuelle
+    playlist[index].position_lecture_musique = 0;
+    musique_en_parallel_actif = 1;
+}

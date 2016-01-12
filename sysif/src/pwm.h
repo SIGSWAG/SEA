@@ -6,6 +6,9 @@
 #define NOMBRE_DE_NIVEAUX_VOLUME 10
 #define NOMBRE_DE_NIVEAUX_VOLUME_MIN 4
 #define LEAP_MOTION 1
+#define MUSIQUE_MODE_PLAYLIST 0
+#define MUSIQUE_MODE_PARALLEL 1
+#define BASE_INCREMENT 2300
 
 void lance_audio(void);
 void configuration_audio(void);
@@ -23,7 +26,8 @@ unsigned int musique_est_prete(void);
 void musique_suivante(void);
 void musique_precedente(void);
 void init_materiel(void);
-
+unsigned int get_mode_musique(void);
+void play_ponctuel(unsigned int mode);
 
 struct musique_infos{
 	int compteur_incrementation;

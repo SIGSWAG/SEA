@@ -28,7 +28,7 @@ void serialReceiver()
                 musique_lecture();
             }
         }
-        else
+        else if(get_mode_musique() == MUSIQUE_MODE_PLAYLIST)
         {
             switch(msg[0]){
                 case 'L':
@@ -81,6 +81,46 @@ void serialReceiver()
                 default:
     				break;
     		}
+        }
+        else{
+			switch(msg[0]){
+                case 'L':
+                    // Left
+                    // Ralentir
+                    play_ponctuel(1);
+                    break;
+                case 'R':
+                    // Right
+                    play_ponctuel(2);
+                    break;
+                case 'U':
+                    // Up
+                    break;
+                case 'D':
+                    // Down
+                    break;
+                case 'F':
+                    // Forward
+                    play_ponctuel(3);
+                    break;
+                case 'B':
+                    // Backward
+                    play_ponctuel(4);
+                    break;
+                case '+':
+                    // Circle clockwise
+                    break;
+                case '-':
+                    // Circle counterclockwise
+                    break;
+                case 'I':
+                    // FistClosed
+                    break;
+                case 'O':
+                    // FistOpened
+                    break;
+                default:
+    				break;
         }
 	}
 }
