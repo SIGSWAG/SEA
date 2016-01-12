@@ -92,8 +92,8 @@ kmain(void)
 	hw_init();
 	sched_init();
 	
-    create_process((func_t*) &serialReceiver);
 	create_process((func_t*) &play_music);
+    create_process((func_t*) &serialReceiver);
 	
 	// Activation des interruptions
 #if IRQS_ACTIVEES

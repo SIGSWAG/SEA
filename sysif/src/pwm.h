@@ -2,6 +2,7 @@
 #define PWM_H
 
 #define ENABLE_VOLUME 0
+#define NB_MUSIQUES 6
 #define NOMBRE_DE_NIVEAUX_VOLUME 10
 #define NOMBRE_DE_NIVEAUX_VOLUME_MIN 4
 #define LEAP_MOTION 1
@@ -28,8 +29,6 @@ struct musique_infos{
 	int compteur_incrementation;
 	unsigned int increment_div_1000;
 	unsigned long long position_lecture_musique;
-	unsigned int musique_arretee;
-	unsigned int musique_prete;
 	char* audio_data_volumes[NOMBRE_DE_NIVEAUX_VOLUME];
 	unsigned long long longueur_piste_audio;
 	char* music_wav_start;

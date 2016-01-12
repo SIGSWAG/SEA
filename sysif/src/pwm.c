@@ -3,8 +3,6 @@
 #include "sched.h"
 #include "kheap.h"
 
-#define NB_MUSIQUES 6
-
 extern char _binary_mario_music_ghosts_wav_end;
 extern char _binary_mario_music_ghosts_wav_start;
 extern char _binary_mario_jump_wav_end;
@@ -332,8 +330,6 @@ audio_init(void)
         playlist[i].compteur_incrementation = 0;
         playlist[i].increment_div_1000 = 2300;
         playlist[i].position_lecture_musique = 0;
-        playlist[i].musique_arretee = 0;
-        playlist[i].musique_prete = 0;
     }
 
     cree_niveaux_volumes();
