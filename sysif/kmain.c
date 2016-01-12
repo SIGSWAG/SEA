@@ -121,6 +121,7 @@ void serialReceiver()
                     break;
                 default:
     				break;
+            }
         }
 	}
 }

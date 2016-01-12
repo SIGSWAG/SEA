@@ -28,7 +28,7 @@ static unsigned int musique_prete = 0;
 
 
 // MODES
-static unsigned int mode_musique = MUSIQUE_MODE_PLAYLIST;
+static unsigned int mode_musique = MUSIQUE_MODE_PARALLEL;//MUSIQUE_MODE_PLAYLIST;
 
 // Playlist
 static unsigned int musique_courante = 0;
@@ -344,8 +344,6 @@ audio_init(void)
         playlist[i].position_lecture_musique = 0;
     }
 
-    musique_fond = &playlist[0];
-
     cree_niveaux_volumes();
 }
 
@@ -402,9 +400,10 @@ lance_audio(void)
                 if(mode_musique == MUSIQUE_MODE_PARALLEL){
                     //son de fond
                     *(pwm+BCM2835_PWM_FIFO) = (char)(playlist[musique_a_lire].audio_data_volumes[indice_volume][(unsigned long long)playlist[musique_a_lire].position_lecture_musique]);
-                    playlist[musique_a_lire].position_lecture_musique += BASE_INCREMENT*2;
+                    playlist[musique_a_lire].position_lecture_musique += 2;
 
                     //son ponctuel
+                    
                     if(musique_en_parallel_actif && musique_en_parallel_index != -1){
                         unsigned int musique_ponctuelle = musique_en_parallel_index;
                         if ((status & ERRORMASK))
@@ -414,13 +413,12 @@ lance_audio(void)
                         if (playlist[musique_ponctuelle].position_lecture_musique < playlist[musique_ponctuelle].longueur_piste_audio)
                         {
                             if (!(status & BCM2835_FULL1)){ 
-                                /* on passe la main en attendant que (status & BCM2835_FULL1)=0 => pas plein
-                                (!=0 => plein) */
                                 sys_wait(PROCESS_DETAILS_WAITING_PWM_FIFO);
                             }
 
                             *(pwm+BCM2835_PWM_FIFO) = (char)(playlist[musique_ponctuelle].audio_data_volumes[indice_volume][(unsigned long long)playlist[musique_ponctuelle].position_lecture_musique]);
-                            playlist[musique_ponctuelle].position_lecture_musique += BASE_INCREMENT*2;
+                            playlist[musique_ponctuelle].position_lecture_musique += 4;
+                            playlist[musique_a_lire].position_lecture_musique += 2;
                         }
                         else{
                             // fin de la musique ponctuelle
@@ -432,7 +430,7 @@ lance_audio(void)
                 }
                 else{
                     *(pwm+BCM2835_PWM_FIFO) = (char)(playlist[musique_a_lire].audio_data_volumes[indice_volume][(unsigned long long)playlist[musique_a_lire].position_lecture_musique]);
-                    playlist[musique_a_lire].position_lecture_musique += BASE_INCREMENT*2;
+                    playlist[musique_a_lire].position_lecture_musique += get_incr(musique_a_lire);
                 }
             }
             else
