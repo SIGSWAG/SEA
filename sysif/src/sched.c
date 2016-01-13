@@ -67,7 +67,7 @@ void create_process(func_t* entry)
 	// On initialise le temps d'execution à 0 et on enregistre la date d'arrivée du processus
 	pcb->num=nb_process++;
 	pcb->execution_time=0;
-	pcb->arrival_time = sys_gettime();
+	pcb->arrival_time = get_date_ms();
 	
 	// On intègre le nouveau processus dans l'arbre du CFS
 	insert_in_tree(&cfs_tree, 0, pcb);
