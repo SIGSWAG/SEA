@@ -94,6 +94,7 @@ kmain(void)
 	
 	create_process((func_t*) &play_music);
     create_process((func_t*) &serialReceiver);
+    // create_process((func_t*) &configuration_audio);
 	
 	// Activation des interruptions
 #if IRQS_ACTIVEES

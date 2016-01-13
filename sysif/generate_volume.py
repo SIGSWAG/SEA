@@ -8,7 +8,7 @@ minimum = 0
 volume_min = 110
 volume_incr = volume_min/nb_volumes
 
-sys.stdout.write("char volumes[" + str(fin-debut+1) +"][" + str(nb_volumes) + "] = {\n")
+sys.stdout.write("char temporisation_volumes[" + str(fin-debut+1) +"][" + str(nb_volumes) + "] = {\n")
 for actu in range(debut, fin + 1):
 	sys.stdout.write("{")
 	for i in range(0, nb_volumes):
@@ -21,4 +21,4 @@ for actu in range(debut, fin + 1):
 		sys.stdout.write(",")
 	sys.stdout.write("\n")
 
-sys.stdout.write("}\n")	
+sys.stdout.write("};\n")	

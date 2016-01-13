@@ -41,222 +41,6 @@ pause_physique(int t) {
         }
     }
 }
-/*
-static int
-divise(int x, int y) {
-    int quotient = 0;
-    int coef = 1;
-    if(x < 0)
-    {
-        x = -x;
-        coef *= -1;
-    }
-    if(y < 0)
-    {
-        y = -y;
-        coef *= -1;
-    }
-    while (x >= y) {
-        x -= y;
-        quotient++;
-    }
-    return quotient * coef;
-}
-*/
-
-
-// static void unsigned_divide(unsigned int dividend,
-//              unsigned int divisor,
-//              unsigned int* quotient,
-//              unsigned int* remainder )
-// {
-//   unsigned int t, num_bits;
-//   unsigned int q, bit, d;
-//   int i;
-
-//   *remainder = 0;
-//   *quotient = 0;
-
-//   if (divisor == 0)
-//     return;
-
-//   if (divisor > dividend) {
-//     *remainder = dividend;
-//     return;
-//   }
-
-//   if (divisor == dividend) {
-//     *quotient = 1;
-//     return;
-//   }
-
-//   num_bits = 32;
-
-//   while (*remainder < divisor) {
-//     bit = (dividend & 0x80000000) >> 31;
-//     *remainder = (*remainder << 1) | bit;
-//     d = dividend;
-//     dividend = dividend << 1;
-//     num_bits--;
-//   }
-
-
-//   /* The loop, above, always goes one iteration too far.
-//      To avoid inserting an "if" statement inside the loop
-//      the last iteration is simply reversed. */
-
-//   dividend = d;
-//   *remainder = *remainder >> 1;
-//   num_bits++;
-
-//   for (i = 0; i < num_bits; i++) {
-//     bit = (dividend & 0x80000000) >> 31;
-//     *remainder = (*remainder << 1) | bit;
-//     t = *remainder - divisor;
-//     q = !((t & 0x80000000) >> 31);
-//     dividend = dividend << 1;
-//     *quotient = (*quotient << 1) | q;
-//     if (q) {
-//        *remainder = t;
-//      }
-//   }
-// }  /* unsigned_divide */
-
-
-
-
-#if ENABLE_VOLUME
-    static unsigned divide(unsigned dividend, unsigned divisor) { 
-
-        unsigned denom=divisor;
-        unsigned current = 1;
-        unsigned answer=0;
-
-        if ( denom > dividend) 
-            return 0;
-
-        if ( denom == dividend)
-            return 1;
-
-        while (denom <= dividend) {
-            denom <<= 1;
-            current <<= 1;
-        }
-
-        denom >>= 1;
-        current >>= 1;
-
-        while (current!=0) {
-            if ( dividend >= denom) {
-                dividend -= denom;
-                answer |= current;
-            }
-            current >>= 1;
-            denom >>= 1;
-        }    
-        return answer;
-    }
-
-    #define ABS(x)  ((x) < 0 ? -(x) : (x))
-
-    static int signed_divide(int dividend,
-               int divisor)
-    {
-      unsigned int dend, dor;
-
-      dend = ABS(dividend);
-      dor  = ABS(divisor);
-      
-
-      /* the sign of the remainder is the same as the sign of the dividend
-         and the quotient is negated if the signs of the operands are
-         opposite */
-      int quotient = divide( dend, dor);
-      
-      if (dividend < 0) {
-        // int remainder = -r;
-        if (divisor > 0)
-          quotient = -quotient;
-      }
-      else { /* positive dividend */
-        // int remainder = r;
-        if (divisor < 0)
-          quotient = -quotient;
-      }
-        return quotient;  
-    } /* signed_divide */
-
-    static uint8_t
-    get_min_uint8(char* data, unsigned int numero_musique)
-    {
-        uint8_t res = 255;
-        unsigned long long i = 0;
-        for (; i < playlist[numero_musique].longueur_piste_audio; ++i)
-        {
-            if(data[i] < res)
-            {
-                res = data[i];
-            }
-        }
-        return res;
-    }
-
-    static uint8_t
-    get_max_uint8(char* data, unsigned int numero_musique)
-    {
-        uint8_t res = 0;
-        unsigned long long i = 0;
-        for (; i < playlist[numero_musique].longueur_piste_audio; ++i)
-        {
-            if(data[i] > res)
-            {
-                res = data[i];
-            }
-        }
-        return res;
-    }
-    static void
-    cree_niveaux_volumes(void)
-    {
-        // note : 0x80=128 = volume 0
-        int i = 0;
-        int j = 0;
-        for(; j<NB_MUSIQUES ; ++j)
-        {
-            for(i=0; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
-            {
-                playlist[j].audio_data_volumes[i] = (char*) kAlloc(sizeof(char) * playlist[j].longueur_piste_audio);
-            }
-        
-            uint8_t max = get_max_uint8(playlist[j].music_wav_start, j); 
-            uint8_t min = get_min_uint8(playlist[j].music_wav_start, j);
-            unsigned long long indice_dans_la_musique = 0;
-            for(; indice_dans_la_musique < playlist[j].longueur_piste_audio ; ++indice_dans_la_musique)
-            {
-                uint8_t actu = playlist[j].music_wav_start[indice_dans_la_musique];
-                uint8_t incr = (uint8_t)signed_divide(110, NOMBRE_DE_NIVEAUX_VOLUME);
-                for(i=0 ; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
-                {
-                    playlist[j].audio_data_volumes[i][indice_dans_la_musique] = (uint8_t)((int)actu + signed_divide( ((255 - incr*i - max)*(actu - min) - (min - incr*i)*(max - actu)), (int)(max - min) ));
-                }
-            }
-        }
-    }
-#else
-    static void
-    cree_niveaux_volumes(void)
-    {
-        int i = 0;
-        int j = 0;
-        for(; j<NB_MUSIQUES ; ++j)
-        {
-            for(i=0; i<NOMBRE_DE_NIVEAUX_VOLUME ; ++i)
-            {
-                playlist[j].audio_data_volumes[i] = playlist[j].music_wav_start;
-            }
-        }    
-    }
-#endif
 
 void
 init_materiel(void)
@@ -331,8 +115,6 @@ audio_init(void)
         playlist[i].increment_div_1000 = 2300;
         playlist[i].position_lecture_musique = 0;
     }
-
-    cree_niveaux_volumes();
 }
 
 static int
@@ -385,7 +167,8 @@ lance_audio(void)
             status =  *(pwm + BCM2835_PWM_STATUS);
             if (!(status & BCM2835_FULL1))
             {
-                *(pwm+BCM2835_PWM_FIFO) = (char)(playlist[musique_a_lire].audio_data_volumes[indice_volume][(unsigned long long)playlist[musique_a_lire].position_lecture_musique]);
+                char intensite_initiale = (char)(playlist[musique_a_lire].music_wav_start[(unsigned long long)playlist[musique_a_lire].position_lecture_musique]);
+                *(pwm+BCM2835_PWM_FIFO) = temporisation_volumes[(uint8_t)intensite_initiale][indice_volume];
                 playlist[musique_a_lire].position_lecture_musique += get_incr(musique_a_lire);
             }
             else
@@ -510,7 +293,7 @@ musique_precedente(void)
 void
 configuration_audio(void)
 {
-    int cpt = 0;
+    // int cpt = 0;
     for(;;)
     {
 
@@ -542,7 +325,9 @@ configuration_audio(void)
         
         // simulation changement de volume
         indice_volume = (indice_volume + 1) % NOMBRE_DE_NIVEAUX_VOLUME;
+        sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
 
+        /*
         // simulation de stop
         cpt++;
         sys_wait(PROCESS_DETAILS_WAITING_1_SECOND);
@@ -556,6 +341,7 @@ configuration_audio(void)
                 musique_lecture();                
             }
         }
+        */
     }
 }
 
