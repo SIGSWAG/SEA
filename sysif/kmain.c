@@ -93,9 +93,12 @@ kmain(void)
 	sched_init();
 	
 	create_process((func_t*) &play_music);
+#if LEAP_MOTION
     create_process((func_t*) &serialReceiver);
-    // create_process((func_t*) &configuration_audio);
-	
+#else
+    create_process((func_t*) &configuration_audio);
+#endif
+
 	// Activation des interruptions
 #if IRQS_ACTIVEES
 		timer_init();

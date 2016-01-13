@@ -3,8 +3,10 @@
 #include "sched.h"
 #include "kheap.h"
 
-extern char _binary_mario_music_ghosts_wav_end;
-extern char _binary_mario_music_ghosts_wav_start;
+// extern char _binary_mario_music_ghosts_wav_end;
+// extern char _binary_mario_music_ghosts_wav_start;
+extern char _binary_mario_music_theme_wav_end;
+extern char _binary_mario_music_theme_wav_start;
 extern char _binary_mario_jump_wav_end;
 extern char _binary_mario_jump_wav_start;
 extern char _binary_mario_gameover_wav_end;
@@ -92,8 +94,10 @@ audio_init(void)
        PWM0_RANGE=1024
        PWM1_RANGE=1024 */
 
-    playlist[0].music_wav_end = &_binary_mario_music_ghosts_wav_end;
-    playlist[0].music_wav_start = &_binary_mario_music_ghosts_wav_start;
+    // playlist[0].music_wav_end = &_binary_mario_music_ghosts_wav_end;
+    // playlist[0].music_wav_start = &_binary_mario_music_ghosts_wav_start;
+    playlist[0].music_wav_end = &_binary_mario_music_theme_wav_end;
+    playlist[0].music_wav_start = &_binary_mario_music_theme_wav_start;
     playlist[1].music_wav_end = &_binary_mario_jump_wav_end;
     playlist[1].music_wav_start = &_binary_mario_jump_wav_start;
     playlist[2].music_wav_end = &_binary_mario_gameover_wav_end;

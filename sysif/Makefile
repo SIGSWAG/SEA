@@ -19,7 +19,7 @@ CFLAGS=-Wall -Werror -nostdlib -nostartfiles -ffreestanding -std=c99 -g -fomit-f
 COMMON_FLAGS=-mcpu=arm1176jzf-s
 
 # Object files (excluding kmain)
-OBJECTS=$(addsuffix .o,  $(addprefix build/, $(basename $(notdir $(wildcard src/*.[cs]))))) mario_music_ghosts.o mario_jump.o mario_gameover.o mario_1UP.o mario_mushroom.o mario_win.o
+OBJECTS=$(addsuffix .o,  $(addprefix build/, $(basename $(notdir $(wildcard src/*.[cs]))))) mario_music_theme.o mario_jump.o mario_gameover.o mario_1UP.o mario_mushroom.o mario_win.o
 
 # non-default usage: "make KMAIN=test/my-kmain.c" 
 KMAIN ?= ./kmain.c
@@ -70,6 +70,9 @@ build/kernel.list: build/kernel.elf
 mario_music_ghosts.o: mario_music_ghosts.wav
 	arm-none-eabi-ld -s -r -o $@ -b binary $^
 
+mario_music_theme.o: mario_music_theme.wav
+	arm-none-eabi-ld -s -r -o $@ -b binary $^
+
 mario_jump.o: mario_jump.wav
 	arm-none-eabi-ld -s -r -o $@ -b binary $^
 
@@ -95,7 +98,8 @@ mario_win.o: mario_win.wav
 .PHONY:clean
 clean:
 	rm -rf build
-	rm -f mario_music_ghosts.o
+	rm -f mario_music_theme.o
+#	rm -f mario_music_ghosts.o
 	rm -f mario_jump.o
 	rm -f mario_gameover.o
 	rm -f mario_1UP.o
