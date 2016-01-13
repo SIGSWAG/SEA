@@ -82,10 +82,13 @@ void create_process(func_t* entry)
     pcb->status = PROCESS_WAITING;
     pcb->status_details = PROCESS_DETAILS_NONE;
 
+#if CFS
+#else
     // On chaîne de manière circulaire current_process
     struct pcb_s * temp_pcb = current_process->next_pcb;
     current_process->next_pcb = pcb;
     pcb->next_pcb = temp_pcb;
+#endif
 
     pcb->page_table = init_table_page();
     //Allocation de la stack, et on fait pointer sp tout en haut de ce qu'on vient allouer vu que SP décroit
@@ -110,7 +113,7 @@ void create_process(func_t* entry)
     // On initialise le temps d'execution à 0 et on enregistre la date d'arrivée du processus
 	pcb->num=nb_process++;
 	pcb->execution_time=0;
-	pcb->arrival_time = sys_gettime();
+	pcb->arrival_time = get_date_ms();
 	
 	// On intègre le nouveau processus dans l'arbre du CFS
 	insert_in_tree(&cfs_tree, 0, pcb);
@@ -317,9 +320,6 @@ void do_sys_exit(uint32_t * sp_param_base)
     //Le processus est terminé et récupération du statut
 	current_process->status = PROCESS_TERMINATED;
     
-#if CFS
-	current_process->return_code = *(sp_param_base + 1);
-#endif
     
     // Changement de process
     elect();

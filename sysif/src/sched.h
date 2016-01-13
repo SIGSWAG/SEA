@@ -33,6 +33,8 @@ struct block {
 
 struct pcb_s {
 
+	int num;
+
     uint32_t regs[13];
     uint32_t sp;
     uint32_t lr_svc;
