@@ -255,6 +255,7 @@ void elect()
 {
 
 #if CFS
+	update_process_list();
 	//On détruit le processus s'il est fini, on le réinsère dans l'arbre sinon
 	if(current_process->status == PROCESS_TERMINATED)
 	{
@@ -376,7 +377,7 @@ void do_sys_yield(uint32_t * sp_param_base)
 	
 	//Le temps donné est égal au temps d'attente divisé par le nombre de processus en attente.
 	next_tick = (change_time - current_process->execution_time - current_process->arrival_time);
-	next_tick = divide(next_tick,cfs_tree.nb_node + 1);
+	next_tick = divide(next_tick,cfs_tree.nb_node + 1+ sleeping_process.num);
 	if(next_tick > EXECUTION_TIME_MAX) next_tick = EXECUTION_TIME_MAX;
 #endif
 }
