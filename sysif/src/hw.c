@@ -26,7 +26,7 @@ get_date_ms()
 #if 1
     uint32_t date_lowbits = Get32(CLO);
     uint64_t date_highbits = (uint64_t) Get32(CHI);
-    uint64_t date = divide(((date_highbits << 32) | date_lowbits), SYS_TIMER_CLOCK_div_1000);
+    uint64_t date = ((date_highbits << 32) | date_lowbits);
 #else
     uint64_t date = ((uint64_t) 0x43 << 32) | 0x42;
 #endif
@@ -48,7 +48,7 @@ void
 set_next_tick(uint32_t time_ms)
 {
     uint32_t date_lowbits = Get32(CLO);
-    date_lowbits += (uint32_t) (time_ms * SYS_TIMER_CLOCK_div_1000) ;
+    date_lowbits += (uint32_t) (time_ms) ;
     Set32(C1, date_lowbits);
 }
 
