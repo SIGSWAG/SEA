@@ -15,8 +15,9 @@ uint32_t lr_user;
 uint32_t sp_user;
 
 tree cfs_tree;
-/** En paramètre? **/
+
 uint64_t change_time;
+struct pcb_s sleeping_process;
 
 int nb_process = 0;
 
@@ -36,7 +37,7 @@ void sched_init()
 
 #if CFS
 	//Init a tree, with its nil node
-	// TODO Mettre galloc 
+	
 	node* nil = (node*) kAlloc(sizeof(node));
 	nil->color=BLACK;
 	nil->left = nil;
@@ -49,6 +50,10 @@ void sched_init()
 	
 	kmain_process.num=nb_process++;
 	kmain_process.execution_time=0;
+	
+	//initialisation de la liste des processus dormants
+	sleeping_process.num=0;
+	sleeping_process.next_pcb = &sleeping_process;
 
 	//initialisation de la date à 0
 	sys_settime(0);
@@ -130,6 +135,71 @@ void __attribute__((naked)) start_current_process()
 
 }
 
+#if CFS
+void update_process_list()
+{
+    struct pcb_s* process = &sleeping_process;
+    while(process->next_pcb != &sleeping_process){
+            switch(process->next_pcb->status_details){
+            case PROCESS_DETAILS_WAITING_SERIAL:
+                //check serial flag
+                if ((Get32(UART_FR) & (1u << 4u)) == 0)
+                {
+                    process->next_pcb->status_details = PROCESS_DETAILS_NONE;
+                    process->next_pcb->status = PROCESS_WAITING;
+                    insert_in_tree(&cfs_tree, process->next_pcb->execution_time, process->next_pcb);
+                    process->next_pcb = process->next_pcb->next_pcb;
+		    process->next_pcb->next_pcb = NULL;
+		    sleeping_process.num--;
+                break;
+            case PROCESS_DETAILS_WAITING_PWM_FIFO:
+            {
+                unsigned* pwm = (void*)PWM_BASE;
+                long status = *(pwm + BCM2835_PWM_STATUS);
+                if(!(status & BCM2835_FULL1)) // si la fifo de la musique n'est plus pleine
+                {
+                    process->next_pcb->status_details = PROCESS_DETAILS_NONE;
+                    process->next_pcb->status = PROCESS_WAITING;
+                    insert_in_tree(&cfs_tree, process->next_pcb->execution_time, process->next_pcb);
+                    process->next_pcb = process->next_pcb->next_pcb;
+		    process->next_pcb->next_pcb = NULL;
+		    sleeping_process.num--;
+                }
+                break;
+            }
+            case PROCESS_DETAILS_WAITING_1_SECOND:
+                if(process->next_pcb->date_veille + 10 <= get_date_ms()) // ~1.5s bizarre pour des ms..
+                {
+                    process->next_pcb->status_details = PROCESS_DETAILS_NONE;
+                    process->next_pcb->status = PROCESS_WAITING;
+                    insert_in_tree(&cfs_tree, process->next_pcb->execution_time, process->next_pcb);
+                    process->next_pcb = process->next_pcb->next_pcb;
+		    process->next_pcb->next_pcb = NULL;
+		    sleeping_process.num--;
+                }
+                break;
+
+            case PROCESS_DETAILS_MUSIC_PAUSE:
+                if(musique_est_prete() == 0 || musique_est_arretee() == 0)
+                {
+                    process->next_pcb->status_details = PROCESS_DETAILS_NONE;
+                    process->next_pcb->status = PROCESS_WAITING;
+                    insert_in_tree(&cfs_tree, process->next_pcb->execution_time, process->next_pcb);
+                    process->next_pcb = process->next_pcb->next_pcb;
+		    process->next_pcb->next_pcb = NULL;
+		    sleeping_process.num--;
+                }
+                break;
+            default:
+                break;
+            }
+        process = process->next_pcb;
+    	}
+	}
+}
+           
+
+#else
 // parcours les process pour voir s'ils sont endormi et s'il peut les reveiller
 void update_process_list()
 {
@@ -179,6 +249,7 @@ void update_process_list()
     }
     while(process != current_process);
 }
+#endif
 
 void elect() 
 {
@@ -188,6 +259,10 @@ void elect()
 	if(current_process->status == PROCESS_TERMINATED)
 	{
 		kFree((uint8_t*)current_process, sizeof(struct pcb_s));
+	} else if(current_process->status == PROCESS_SLEEPING){
+		current_process->next_pcb = sleeping_process.next_pcb;
+		sleeping_process.next_pcb = current_process;
+		sleeping_process.num++;
 	} else {
 		current_process->status = PROCESS_WAITING;
 		insert_in_tree(&cfs_tree, current_process->execution_time, current_process);
@@ -302,6 +377,7 @@ void do_sys_yield(uint32_t * sp_param_base)
 	//Le temps donné est égal au temps d'attente divisé par le nombre de processus en attente.
 	next_tick = (change_time - current_process->execution_time - current_process->arrival_time);
 	next_tick = divide(next_tick,cfs_tree.nb_node + 1);
+	if(next_tick > EXECUTION_TIME_MAX) next_tick = EXECUTION_TIME_MAX;
 #endif
 }
 

@@ -15,6 +15,8 @@
 #define PROCESS_DETAILS_WAITING_1_SECOND 3
 #define PROCESS_DETAILS_MUSIC_PAUSE 4
 
+#define EXECUTION_TIME_MAX 10
+
 
 typedef int (func_t) (void);
 
