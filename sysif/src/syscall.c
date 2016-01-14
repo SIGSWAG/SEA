@@ -28,7 +28,11 @@ void __attribute__((naked)) irq_handler() {
 
     __asm("cps #18"); //on repasse en mode IRQ
     // On réarme le timer + active les interruptions
+#if CFS
+    set_next_tick(next_tick);
+#else
     set_next_tick_default();
+#endif
     ENABLE_TIMER_IRQ();
     ENABLE_IRQ();
 
